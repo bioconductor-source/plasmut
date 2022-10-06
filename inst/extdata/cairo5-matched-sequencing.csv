@@ -1,0 +1,167 @@
+Patient,source,Date,Timepoint,Gene,AAChange,Nucleotide Position (hg19),cfDNA distinct reads,cfDNA distinct mutant reads,wbc distinct reads,wbc distinct mutant reads,type,tumor distinct reads,tumor distinct mutant reads,mutant tags,g_include
+12,plasma,2015-04-08T00:00:00Z,Baseline,HRAS,Y96F,chr11_533769-533769_T_A,1541,4,946,0,Likely Tumor-Specific,-,-,-,yes
+12,plasma,2015-04-08T00:00:00Z,Baseline,APC,E1306*,chr5_112175207-112175207_G_T,1750,395,963,0,Likely Tumor-Specific,-,-,-,yes
+12,plasma,2015-04-08T00:00:00Z,Baseline,TP53,R196*,chr17_7578263-7578263_G_A,1813,331,945,0,Likely Tumor-Specific,-,-,-,yes
+13,plasma,2015-04-09T00:00:00Z,Baseline,FGFR2,428V>E,chr10.fa:123274635-123274635_A_T,2400,4,1297,0,Likely Tumor-Specific,-,-,ND,yes
+13,plasma,2015-04-09T00:00:00Z,Baseline,PDGFRA,810A>D,chr4.fa:55151643-55151643_C_A,3842,4,1538,0,Likely Tumor-Specific,-,-,ND,yes
+13,plasma,2015-04-09T00:00:00Z,Baseline,PIK3CA,104P>R,chr3.fa:178916924-178916924_C_G,2934,113,1356,0,Likely Tumor-Specific,-,-,ND,yes
+13,plasma,2015-04-09T00:00:00Z,Baseline,APC,2748V>E,chr5.fa:112179534-112179534_T_A,3796,4,1671,0,Likely Tumor-Specific,-,-,ND,yes
+13,plasma,2015-04-09T00:00:00Z,Baseline,TP53,G245S,chr17.fa:7577548-7577548_C_T,3006,404,1402,0,Tumor-confirmed,-,-,0.317187,yes
+13,plasma,2015-04-09T00:00:00Z,Baseline,HRAS,138G>V,chr11.fa:533490-533490_C_A,4020,13,0,0,Likely Tumor-Specific,-,-,ND,no
+13,plasma,2015-04-09T00:00:00Z,Baseline,APC,S1335Kfs*7,chr5.fa:112175294-112175294_(null)_A,3208,521,0,0,Tumor-confirmed,-,-,0.43930599999999997,no
+14,plasma,2015-04-17T00:00:00Z,Baseline,ALK,1075S>I,chr2.fa:29446343-29446343_C_A,15747,6091,1123,0,Likely Tumor-Specific,-,-,-,yes
+14,plasma,2015-04-17T00:00:00Z,Baseline,BRAF,600V>E,chr7.fa:140453136-140453136_A_T,7026,1564,1120,0,Likely Tumor-Specific,-,-,-,yes
+14,plasma,2015-04-17T00:00:00Z,Baseline,KIT,498G>R,chr4.fa:55592168-55592168_G_C,4739,1614,1212,0,Likely Tumor-Specific,-,-,-,yes
+14,plasma,2015-04-17T00:00:00Z,Baseline,TP53,673-2A>G,chr17.fa:7577610-7577610_T_C,2805,1207,618,0,Likely Tumor-Specific,-,-,-,yes
+27,plasma,2015-07-30T00:00:00Z,Baseline,PIK3CA,L866W,chr3.fa:178947161-178947161_T_G,1520,709,1471,0,Tumor-confirmed,NA,NA,0.23690800000000001,yes
+27,plasma,2015-07-30T00:00:00Z,Baseline,APC,R876*,chr5.fa:112173917-112173917_C_T,1836,562,1736,0,Tumor-confirmed,NA,NA,0.18576400000000001,yes
+27,plasma,2015-07-30T00:00:00Z,Baseline,TP53,W53*,chr17.fa:7579528-7579528_C_T,1349,857,1547,0,Tumor-confirmed,NA,NA,0.45230799999999999,yes
+27,plasma,2015-04-08T00:00:00Z,Baseline,APC,E1397*,chr5.fa:112175480-112175480_G_T,1935,688,0,0,Tumor-confirmed,NA,NA,0.309091,no
+28,plasma,2015-08-26T00:00:00Z,Baseline,APC,E225Kfs*68,chr5.fa:112128170-112128170_G_(null),1423,559,0,0,Likely Tumor-Specific,-,-,-,no
+28,plasma,2015-08-26T00:00:00Z,Baseline,TP53,D184Afs*62,chr17.fa:7578376-7578379_CTAT_(null),8975,5191,0,0,Likely Tumor-Specific,-,-,-,no
+28,plasma,2015-08-26T00:00:00Z,Baseline,BRAF,762A>S,chr7.fa:140434414-140434414_C_A,5709,6,0,0,Likely Tumor-Specific,-,-,-,no
+36,plasma,2015-10-21T00:00:00Z,Baseline,APC,L479*,chr5.fa:112162832-112162832_T_A,573,96,2494,0,Likely Tumor-Specific,-,-,-,yes
+36,plasma,2015-10-21T00:00:00Z,Baseline,TP53,P278S,chr17.fa:7577106-7577106_G_A,1889,956,2540,0,Likely Tumor-Specific,-,-,-,yes
+36,plasma,2015-10-21T00:00:00Z,Baseline,APC,P1319Lfs*2,chr5.fa:112175246-112175246_C_,1980,648,0,0,Likely Tumor-Specific,-,-,-,no
+38,plasma,2015-10-21T00:00:00Z,Baseline,APC,R876*,chr5.fa:112173917-112173917_C_T,2980,1723,2229,0,Likely Tumor-Specific,-,-,-,yes
+38,plasma,2015-10-21T00:00:00Z,Baseline,TP53,R213*,chr17.fa:7578212-7578212_G_A,2667,1391,2010,0,Likely Tumor-Specific,-,-,-,yes
+45,plasma,2016-01-06T00:00:00Z,Baseline,TP53,R282W,chr17.fa:7577094-7577094_G_A,1958,164,1451,0,Tumor-confirmed,NA,NA,0.46,yes
+45,plasma,2016-01-06T00:00:00Z,Baseline,APC,E1309Dfs*4,chr5.fa:112175212-112175216_AAAAG_,1865,76,0,0,Tumor-confirmed,NA,NA,0.28999999999999998,no
+45,plasma,2016-01-06T00:00:00Z,Baseline,RET,L40P,chr10.fa:43595952-43595952_T_C,1954,89,0,0,Tumor-confirmed,NA,NA,0.06,no
+45,plasma,2016-01-06T00:00:00Z,Baseline,BRCA2,S1650Kfs*16,chr13.fa:32913436-32913436_(null)_A,688,30,1400,0,Tumor-confirmed,NA,NA,0.23,yes
+55,plasma,2016-02-18T00:00:00Z,Baseline,APC,N/A,chr5.fa:112151191-112151191_G_A,835,52,711,0,Tumor-confirmed,NA,NA,0.25419000000000003,yes
+55,plasma,2016-02-18T00:00:00Z,Baseline,APC,Q1367*,chr5.fa:112175390-112175390_C_T,1327,207,976,0,Tumor-confirmed,NA,NA,0.31189099999999997,yes
+55,plasma,2016-02-18T00:00:00Z,Baseline,TP53,G245S,chr17.fa:7577548-7577548_C_T,949,115,886,0,Tumor-confirmed,NA,NA,0.39263799999999999,yes
+58,plasma,2016-02-17T00:00:00Z,Baseline,KRAS,Q22K,chr12.fa:25398255-25398255_G_T,1860,267,1380,0,Likely Tumor-Specific,-,-,-,yes
+58,plasma,2016-02-17T00:00:00Z,Baseline,KRAS,V14I,chr12.fa:25398279-25398279_C_T,1860,267,1376,0,Likely Tumor-Specific,-,-,-,yes
+58,plasma,2016-02-17T00:00:00Z,Baseline,PIK3CA,G912V,chr3.fa:178947860-178947860_G_T,2667,1,1544,0,Likely Tumor-Specific,-,-,-,yes
+58,plasma,2016-02-17T00:00:00Z,Baseline,APC,K939Sfs*16,chr5.fa:112174106-112174106_A_,1165,311,0,0,Likely Tumor-Specific,-,-,-,no
+58,plasma,2016-02-17T00:00:00Z,Baseline,APC,S1581Lfs*69,chr5.fa:112176030-112176030_T_,1537,582,0,0,Likely Tumor-Specific,-,-,-,no
+62,plasma,2016-03-16T00:00:00Z,Baseline,APC,E1317Kfs*4,chr5.fa:112175239-112175239_T_,1940,1461,3927,0,Likely Tumor-Specific,-,-,-,yes
+68,plasma,2016-04-20T00:00:00Z,Baseline,BRAF,D594N,chr7.fa:140453155-140453155_C_T,29,9,0,0,Tumor-confirmed,-,-,0.22,no
+68,plasma,2016-04-20T00:00:00Z,Baseline,APC,S1346*,chr5.fa:112175328-112175328_C_G,2023,1252,0,0,Tumor-confirmed,-,-,0.38,no
+68,plasma,2016-04-20T00:00:00Z,Baseline,PIK3CA,E545K,chr3.fa:178936091-178936091_G_A,9,3,0,0,Tumor-confirmed,-,-,7.0000000000000007E-2,no
+105,plasma,2016-08-03T00:00:00Z,Baseline,APC,E1353*,chr5.fa:112175348-112175348_G_T,3967,1247,973,0,Tumor-confirmed,-,-,0.504,yes
+105,plasma,2016-08-03T00:00:00Z,Baseline,TP53,N/A,chr17.fa:7578556-7578556_T_C,6072,1891,687,0,Tumor-confirmed,-,-,0.33181100000000002,yes
+105,plasma,2016-08-03T00:00:00Z,Baseline,ATM,V2671L,chr11.fa:108205696-108205696_G_C,33,4,764,0,Tumor-confirmed,-,-,0.103926,yes
+108,plasma,2016-08-08T00:00:00Z,Baseline,APC,R876*,chr5.fa:112173917-112173917_C_T,708,280,1583,0,Likely Tumor-Specific,-,-,-,yes
+108,plasma,2016-08-08T00:00:00Z,Baseline,CDH1,A130G,chr16.fa:68842328-68842328_C_G,293,103,1040,0,Likely Tumor-Specific,-,-,-,yes
+108,plasma,2016-08-08T00:00:00Z,Baseline,TP53,R248W,chr17.fa:7577539-7577539_G_A,4008,2340,0,0,Likely Tumor-Specific,-,-,-,no
+108,plasma,2016-08-08T00:00:00Z,Baseline,APC,L1488Ffs*19,chr5.fa:112175755-112175755_A_(null),661,118,0,0,Likely Tumor-Specific,-,-,-,no
+124,plasma,2016-09-27T00:00:00Z,Baseline,APC,R232*,chr5.fa:112128191-112128191_C_T,15,6,1182,0,Likely Tumor-Specific,-,-,-,yes
+124,plasma,2016-09-27T00:00:00Z,Baseline,APC,Q1338*,chr5.fa:112175303-112175303_C_T,664,156,1429,0,Likely Tumor-Specific,-,-,-,yes
+130,plasma,2016-10-31T00:00:00Z,Baseline,APC,R564*,chr5.fa:112164616-112164616_C_T,115,49,1199,0,Likely Tumor-Specific,-,-,ND,yes
+139,plasma,2016-10-31T00:00:00Z,Baseline,TP53,F113del,chr17.fa:7579346-7579348_AAG_(null),2150,706,"NA","NA",Likely Tumor-Specific,-,-,-,no
+139,plasma,2016-10-31T00:00:00Z,Baseline,APC,A614T,chr5.fa:112170744-112170744_G_A,326,102,"NA","NA",Likely Tumor-Specific,-,-,-,no
+139,plasma,2016-10-31T00:00:00Z,Baseline,TP53,R273C,chr17.fa:7577121-7577121_G_A,3097,1076,"NA","NA",Likely Tumor-Specific,-,-,-,no
+139,plasma,2016-10-31T00:00:00Z,Baseline,PIK3CA,G1049R,chr3.fa:178952090-178952090_G_C,460,102,"NA","NA",Likely Tumor-Specific,-,-,-,no
+139,plasma,2016-10-31T00:00:00Z,Baseline,PIK3CA,N345K,chr3.fa:178921553-178921553_T_A,40,15,"NA","NA",Likely Tumor-Specific,-,-,-,no
+148,plasma,2017-01-13T00:00:00Z,Baseline,TP53,R273H,chr17.fa:7577120-7577120_C_T,4786,3955,1067,0,Likely Tumor-Specific,-,-,-,yes
+148,plasma,2017-01-13T00:00:00Z,Baseline,APC,N/A,chr5.fa:112162946-112162946_T_C,14,14,1015,0,Likely Tumor-Specific,-,-,-,yes
+157,plasma,2017-03-06T00:00:00Z,Baseline,APC,Q1303*,chr5.fa:112175197-112175198_GC_TT,1368,96,2000,0,Tumor-confirmed,-,-,0.209756,yes
+157,plasma,2017-03-06T00:00:00Z,Baseline,APC,Y1376*,chr5.fa:112175419-112175419_T_A,3318,306,2504,0,Tumor-confirmed,-,-,0.21318699999999999,yes
+157,plasma,2017-03-06T00:00:00Z,Baseline,TP53,Q38*,chr17.fa:7579575-7579575_G_A,1882,338,1349,0,Tumor-confirmed,-,-,0.42494500000000002,yes
+165,plasma,2017-05-01T00:00:00Z,Baseline,APC,E1309Kfs*12,chr5.fa:112175216-112175216_G_(null),4094,552,976,0,Tumor-confirmed,-,-,0.21148800000000001,yes
+165,plasma,2017-05-01T00:00:00Z,Baseline,TP53,P190Lfs*57,chr17.fa:7578280-7578280_G_(null),5905,1260,996,0,Tumor-confirmed,-,-,0.40084399999999998,yes
+165,plasma,2017-05-01T00:00:00Z,Baseline,RET,V145I,chr10.fa:43597885-43597885_G_A,9168,1717,970,0,Tumor-confirmed,-,-,0.23569699999999999,yes
+165,plasma,2017-05-01T00:00:00Z,Baseline,APC,I742Yfs*14,chr5.fa:112173514-112173514_(null)_T,2263,289,0,0,Tumor-confirmed,-,-,0.242456,no
+176,plasma,2017-06-26T00:00:00Z,Baseline,APC,E1374*,chr5.fa:112175411-112175411_G_T,3819,2582,1728,0,Tumor-confirmed,-,-,0.41,yes
+176,plasma,2017-06-26T00:00:00Z,Baseline,TP53,P301Qfs*44,chr17.fa:7577036-7577036_G_(null),4150,2606,1421,0,Tumor-confirmed,-,-,0.33,yes
+179,plasma,2017-06-21T00:00:00Z,Baseline,APC,R216*,chr5.fa:112128143-112128143_C_T,148,2,1138,0,Tumor-confirmed,-,-,0.47499999999999998,yes
+179,plasma,2017-06-21T00:00:00Z,Baseline,TP53,R175H,chr17.fa:7578406-7578406_C_T,4323,159,1559,0,Tumor-confirmed,-,-,0.65353399999999995,yes
+192,plasma,2017-08-02T00:00:00Z,Baseline,APC,R232*,chr5.fa:112128191-112128191_C_T,945,292,1665,0,Likely Tumor-Specific,-,-,-,yes
+192,plasma,2017-08-02T00:00:00Z,Baseline,APC,K2193N,chr5.fa:112177870-112177870_A_T,1902,695,1656,0,Likely Tumor-Specific,-,-,-,yes
+192,plasma,2017-08-02T00:00:00Z,Baseline,TP53,G244D,chr17.fa:7577550-7577550_C_T,2244,1423,1394,0,Likely Tumor-Specific,-,-,-,yes
+192,plasma,2017-08-02T00:00:00Z,Baseline,MET,S441T,chr7.fa:116371842-116371842_T_A,7580,1506,0,0,Likely Tumor-Specific,-,-,-,no
+193,plasma,2017-07-27T00:00:00Z,Baseline,APC,N/A,chr5.fa:112170863-112170863_G_A,710,432,1761,0,Tumor-confirmed,-,-,0.42,yes
+193,plasma,2017-07-27T00:00:00Z,Baseline,TP53,R306*,chr17.fa:7577022-7577022_G_A,4398,1263,2401,0,Tumor-confirmed,-,-,0.27,yes
+193,plasma,2017-07-27T00:00:00Z,Baseline,TP53,C176F,chr17.fa:7578403-7578403_C_A,8921,2479,0,0,Tumor-confirmed,-,-,0.24,no
+198,plasma,2017-08-29T00:00:00Z,Baseline,APC,S457*,chr5.fa:112157650-112157650_C_A,3064,233,1485,0,Tumor-confirmed,-,-,0.25974000000000003,yes
+198,plasma,2017-08-29T00:00:00Z,Baseline,APC,R230Pfs*66,chr5.fa:112128178-112128178_(null)_CATACTTC,2120,175,0,0,Tumor-confirmed,-,-,9.0909100000000007E-2,no
+198,plasma,2017-08-29T00:00:00Z,Baseline,TP53,R248W,chr17.fa:7577539-7577539_G_A,4284,745,0,0,Tumor-confirmed,-,-,0.41570699999999999,no
+210,plasma,2017-10-13T00:00:00Z,Baseline,TP53,N/A,chr17.fa:7574035-7574035_T_C,3333,2686,1274,0,Tumor-confirmed,-,-,0.46,yes
+210,plasma,2017-10-13T00:00:00Z,Baseline,APC,E1309Dfs*4,chr5.fa:112175212-112175216_AAAAG_(null),3930,3164,0,0,Tumor-confirmed,-,-,0.54,no
+213,plasma,2017-11-09T00:00:00Z,Baseline,APC,Q412*,chr5.fa:112154963-112154963_C_T,1742,137,1055,0,Tumor-confirmed,-,-,0.27,yes
+213,plasma,2017-11-09T00:00:00Z,Baseline,TP53,R213*,chr17.fa:7578212-7578212_G_A,2472,166,0,0,Tumor-confirmed,-,-,0.36,no
+214,plasma,2017-11-23T00:00:00Z,Baseline,APC,Q901Gfs*10,chr5.fa:112173988-112173989_CT_,1745,744,2249,0,Tumor-confirmed,-,-,0.57999999999999996,yes
+214,plasma,2017-11-23T00:00:00Z,Baseline,TP53,R175H,chr17.fa:7578406-7578406_C_T,2503,1554,1966,0,Tumor-confirmed,-,-,0.5,yes
+227,plasma,2017-12-19T00:00:00Z,Baseline,TP53,R273C,chr17.fa:7577121-7577121_G_A,637,413,1066,0,Tumor-confirmed,595,263,0.44201680672268906,yes
+227,plasma,2017-12-19T00:00:00Z,Baseline,APC,Q793*,chr5.fa:112173668-112173668_C_T,1027,754,1378,0,Tumor-confirmed,573,370,0.64572425828970337,yes
+227,plasma,2017-12-19T00:00:00Z,Baseline,APC,L508Dfs*28,chr5.fa:112162918-112162919_TT_(null),914,666,0,0,Tumor-confirmed,-,-,0.74,no
+245,plasma,2018-02-08T00:00:00Z,Baseline,APC,Q695*,chr5.fa:112173374-112173374_C_T,778,134,1992,0,Tumor-confirmed,519,26,5.0096339113680152E-2,yes
+245,plasma,2018-02-08T00:00:00Z,Baseline,MYC,C203S,chr8.fa:128751071-128751071_G_C,916,84,1555,0,Tumor-confirmed,4354,99,2.2737712448323382E-2,yes
+245,plasma,2018-02-08T00:00:00Z,Baseline,TP53,R342*,chr17.fa:7574003-7574003_G_A,678,139,1321,0,Tumor-confirmed,974,35,3.5934291581108828E-2,yes
+269,plasma,2018-04-04T00:00:00Z,Baseline,TP53,R213*,chr17.fa:7578212-7578212_G_A,1247,111,1276,0,Tumor-confirmed,533,296,0.55534709193245779,yes
+269,plasma,2018-04-04T00:00:00Z,Baseline,APC,E1286*,chr5.fa:112175147-112175147_G_T,1532,296,0,0,Tumor-confirmed,157,97,0.62,no
+280,plasma,2018-05-31T00:00:00Z,Baseline,APC,Q433*,chr5.fa:112155026-112155026_C_T,2225,274,1386,0,Likely Tumor-Specific,-,-,-,yes
+280,plasma,2018-05-31T00:00:00Z,Baseline,PIK3CA,E542K,chr3.fa:178936082-178936082_G_A,2944,12,1562,0,Likely Tumor-Specific,-,-,-,yes
+280,plasma,2018-05-31T00:00:00Z,Baseline,TP53,R248G,chr17.fa:7577539-7577539_G_C,2248,607,1655,0,Likely Tumor-Specific,-,-,-,yes
+280,plasma,2018-05-31T00:00:00Z,Baseline,TP53,Y220C,chr17.fa:7578190-7578190_T_C,2213,1,1566,0,Likely Tumor-Specific,-,-,-,yes
+286,plasma,2018-06-11T00:00:00Z,Baseline,RAF1,S257L,chr3.fa:12645699-12645699_G_A,2698,622,1242,0,Likely Tumor-Specific,-,-,-,yes
+286,plasma,2018-06-11T00:00:00Z,Baseline,TP53,C141Y,chr17.fa:7578508-7578508_C_T,2065,420,989,0,Likely Tumor-Specific,-,-,-,yes
+286,plasma,2018-06-11T00:00:00Z,Baseline,KRAS,G12C,chr12.fa:25398285-25398285_C_A,2355,379,0,0,Likely Tumor-Specific,-,-,-,no
+294,plasma,2018-06-21T00:00:00Z,Baseline,EZH2,S84L,chr7.fa:148529838-148529838_G_A,640,47,803,0,Likely Tumor-Specific,-,-,-,yes
+294,plasma,2018-06-21T00:00:00Z,Baseline,TP53,Y234H,chr17.fa:7577581-7577581_A_G,638,91,784,0,Likely Tumor-Specific,-,-,-,yes
+297,plasma,2018-07-12T00:00:00Z,Baseline,TP53,G245S,chr17.fa:7577548-7577548_C_T,1485,363,1265,0,Tumor-confirmed,684,353,0.51608187134502925,yes
+302,plasma,2018-07-05T00:00:00Z,Baseline,ROS1,A1964E,chr6.fa:117641080-117641080_G_T,834,47,967,0,Likely Tumor-Specific,-,-,ND,yes
+302,plasma,2018-07-05T00:00:00Z,Baseline,TP53,C275F,chr17.fa:7577114-7577114_C_A,751,87,0,0,Tumor-confirmed,535,318,0.59,no
+302,plasma,2018-07-05T00:00:00Z,Baseline,APC,R216*,chr5.fa:112128143-112128143_C_T,413,73,0,0,Tumor-confirmed,164,77,0.47,no
+305,plasma,2018-07-11T00:00:00Z,Baseline,EGFR,S464L,chr7.fa:55227924-55227924_C_T,1118,2,0,0,Likely Tumor-Specific,-,-,-,no
+305,plasma,2018-07-11T00:00:00Z,Baseline,TP53,C242Y,chr17.fa:7577556-7577556_C_T,856,52,883,0,Likely Tumor-Specific,-,-,-,yes
+305,plasma,2018-07-11T00:00:00Z,Baseline,APC,R216*,chr5.fa:112128143-112128143_C_T,699,20,661,0,Likely Tumor-Specific,-,-,-,yes
+312,plasma,2018-08-14T00:00:00Z,Baseline,APC,R283*,chr5.fa:112151204-112151204_C_T,1896,644,1059,0,Tumor-confirmed,289,58,0.20069204152249134,yes
+312,plasma,2018-08-14T00:00:00Z,Baseline,TP53,C135F,chr17.fa:7578526-7578526_C_A,1288,874,1229,0,Tumor-confirmed,3679,862,0.23430279967382442,yes
+312,plasma,2018-08-14T00:00:00Z,Baseline,APC,S1355Ffs*19,chr5.fa:112175351-112175352_TT_(null),2508,942,0,0,Likely Tumor-Specific,NA,NA,ND,no
+335,plasma,2018-10-09T00:00:00Z,Baseline,ALK,R51G,chr2.fa:30143375-30143375_T_C,1453,235,1147,0,Likely Tumor-Specific,-,-,-,yes
+335,plasma,2018-10-09T00:00:00Z,Baseline,BRAF,V600E,chr7.fa:140453136-140453136_A_T,1939,563,1317,0,Likely Tumor-Specific,-,-,-,yes
+335,plasma,2018-10-09T00:00:00Z,Baseline,PIK3CA,E542K,chr3.fa:178936082-178936082_G_A,1814,386,1396,0,Likely Tumor-Specific,-,-,-,yes
+335,plasma,2018-10-09T00:00:00Z,Baseline,TP53,R306*,chr17.fa:7577022-7577022_G_A,1995,861,1361,0,Likely Tumor-Specific,-,-,-,yes
+352,plasma,2018-11-29T00:00:00Z,Baseline,APC,E1284*,chr5.fa:112175141-112175141_G_T,2461,831,1391,0,Likely Tumor-Specific,-,-,-,yes
+352,plasma,2018-11-29T00:00:00Z,Baseline,ALK,R1214C,chr2.fa:29443577-29443577_G_A,2936,38,1238,0,Likely Tumor-Specific,-,-,-,yes
+352,plasma,2018-11-29T00:00:00Z,Baseline,TP53,S90Gfs*32,chr17.fa:7579417-7579420_GGAG_(null),1733,1103,0,0,Likely Tumor-Specific,-,-,-,no
+352,plasma,2018-11-29T00:00:00Z,Baseline,APC,L964Ffs*3,chr5.fa:112174180-112174180_(null)_T,2889,954,0,0,Likely Tumor-Specific,-,-,-,no
+354,plasma,2018-12-13T00:00:00Z,Baseline,TP53,n/a,chr17.fa:7578370-7578370_C_T,670,133,1146,0,Tumor-confirmed,1592,817,0.51319095477386933,yes
+354,plasma,2018-12-13T00:00:00Z,Baseline,APC,R283*,chr5.fa:112151204-112151204_C_T,374,94,0,0,Tumor-confirmed,397,256,0.64483627204030225,no
+362,plasma,2019-01-08T00:00:00Z,Baseline,APC,R213*,chr5.fa:112116592-112116592_C_T,1105,386,1565,0,Likely Tumor-Specific,-,-,ND,yes
+362,plasma,2019-01-08T00:00:00Z,Baseline,ATM,N2826I,chr11.fa:108216528-108216528_A_T,1829,759,1664,0,Tumor-confirmed,319,24,7.5235109717868343E-2,yes
+362,plasma,2019-01-08T00:00:00Z,Baseline,FGFR2,Q778P,chr10.fa:123239504-123239504_T_G,2298,4,2436,0,Likely Tumor-Specific,-,-,ND,yes
+362,plasma,2019-01-08T00:00:00Z,Baseline,TP53,E298*,chr17.fa:7577046-7577046_C_A,1840,1064,2035,0,Tumor-confirmed,1104,52,4.710144927536232E-2,yes
+365,plasma,2019-01-08T00:00:00Z,Baseline,TP53,N235Tfs*12,chr17.fa:7577577-7577577_T_(null),1177,127,1209,0,Tumor-confirmed,1073,574,0.53494874184529362,yes
+391,plasma,2019-04-09T00:00:00Z,Baseline,APC,R564*,chr5.fa:112164616-112164616_C_T,1527,439,979,0,Likely Tumor-Specific,-,-,-,yes
+391,plasma,2019-04-09T00:00:00Z,Baseline,APC,E1306*,chr5.fa:112175207-112175207_G_T,2103,630,1207,0,Likely Tumor-Specific,-,-,-,yes
+391,plasma,2019-04-09T00:00:00Z,Baseline,TP53,n/a,chr17.fa:7576852-7576852_C_T,1888,1019,1104,0,Likely Tumor-Specific,-,-,-,yes
+393,plasma,2019-04-30T00:00:00Z,Baseline,TP53,R273C,chr17.fa:7577121-7577121_G_A,765,30,1403,0,Likely Tumor-Specific,-,-,ND,yes
+393,plasma,2019-04-30T00:00:00Z,Baseline,ALK,A1439T,chr2.fa:29416638-29416638_C_T,1140,7,1748,0,Likely Tumor-Specific,-,-,ND,yes
+393,plasma,2019-04-30T00:00:00Z,Baseline,APC,E1317*,chr5.fa:112175240-112175240_G_T,1032,72,0,0,Likely Tumor-Specific,-,-,ND,no
+62,"CTC, plasma",2016-03-16T00:00:00Z,Baseline,TP53,R248Q,chr17.fa:7577538-7577538_C_T,1626,1234,2975,1,Circulating Tumor Cell,-,-,-,no
+294,"CTC, plasma",2018-06-21T00:00:00Z,Baseline,APC,T829Sfs*14,chr5.fa:112173776-112173777_AC_(null),917,197,1351,1,Circulating Tumor Cell,-,-,-,no
+185,"CTC, plasma",2017-07-10T00:00:00Z,Baseline,TP53,R273H,chr17.fa:7577120-7577120_C_T,3444,1975,1456,7,Circulating Tumor Cell,-,-,-,no
+185,"CTC, plasma",2017-07-10T00:00:00Z,Baseline,APC,R213*,chr5.fa:112116592-112116592_C_T,9,2,1588,9,Circulating Tumor Cell,-,-,-,no
+157,"CHIP, plasma",2017-03-06T00:00:00Z,Baseline,TP53,M237K,chr17.fa:7577571-7577571_A_T,2969,15,1495,5,WBC variant,-,-,ND,yes
+393,"CHIP, plasma",2019-04-30T00:00:00Z,Baseline,CDH1,N297D,chr16.fa:68845643-68845643_A_G,0,0,1599,1,WBC variant,-,-,ND,yes
+45,"CHIP, plasma",2016-01-06T00:00:00Z,Baseline,BRAF,N581I,-,836,4,1376,1,WBC variant,-,-,ND,yes
+227,"CHIP, plasma",2017-12-19T00:00:00Z,Baseline,PDGFRA,K196M,chr4.fa:55130053-55130053_A_T,0,0,961,1,WBC variant,-,-,ND,yes
+245,"CHIP, plasma",2018-02-08T00:00:00Z,Baseline,RET,E595G,-,902,2,1342,2,WBC variant,-,-,ND,yes
+312,"CHIP, plasma",2018-08-14T00:00:00Z,Baseline,ATM,R2227C,-,2445,1,1295,5,WBC variant,-,-,ND,yes
+393,"CHIP, plasma",2019-04-30T00:00:00Z,Baseline,APC,K2734I,chr5.fa:112179492-112179492_A_T,0,0,1716,7,WBC variant,-,-,ND,yes
+302,"CHIP, plasma",2018-07-05T00:00:00Z,Baseline,ATM,T2773I,chr11.fa:108213998-108213998_C_T,0,0,1024,5,WBC variant,-,-,ND,yes
+393,"CHIP, plasma",2019-04-30T00:00:00Z,Baseline,ATM,L2455P,-,889,17,1368,10,WBC variant,-,-,ND,yes
+302,"CHIP, plasma",2018-07-05T00:00:00Z,Baseline,POLD1,R1008C,-,783,3,785,7,WBC variant,-,-,ND,yes
+393,"CHIP, plasma",2019-04-30T00:00:00Z,Baseline,ATM,S2162R,-,808,11,1560,31,WBC variant,-,-,ND,yes
+198,"CHIP, plasma",2017-08-29T00:00:00Z,Baseline,TP53,V173G,chr17.fa:7578412-7578412_A_C,5484,642,1665,230,WBC variant,-,-,5.2309000000000001E-2,yes
+68,"CHIP, plasma",2016-04-20T00:00:00Z,Baseline,BRCA1,D693N,-,70,31,2306,1074,Germline,-,-,0.54,yes
+157,"CHIP, plasma",2017-03-06T00:00:00Z,Baseline,BRCA2,A2951T,chr13.fa:32953550-32953550_G_A,28,11,1743,824,Germline,-,-,0.22838700000000001,yes
+148,"CHIP, plasma",2017-01-13T00:00:00Z,Baseline,ATM,T1810I,chr11_108173689-108173689_C_T,26,3,1346,646,Germline,-,-,-,yes
+105,"CHIP, plasma",2016-08-03T00:00:00Z,Baseline,BRCA2,R2108H,-,27,13,900,433,Germline,-,-,0.44211499999999998,yes
+210,"CHIP, plasma",2017-10-13T00:00:00Z,Baseline,BRCA1,D693N,-,5784,2473,1787,862,Germline,-,-,0.56999999999999995,yes
+210,"CHIP, plasma",2017-10-13T00:00:00Z,Baseline,BRCA2,R2108H,-,453,182,1412,690,Germline,-,-,0.56999999999999995,yes
+45,"CHIP, plasma",2016-01-06T00:00:00Z,Baseline,BRCA2,T1915M,-,1179,551,1568,767,Germline,-,-,0.59,yes
+68,"CHIP, plasma",2016-04-20T00:00:00Z,Baseline,APC,R2505Q,-,1553,127,2117,1037,Germline,-,-,0.3,yes
+108,"CHIP, plasma",2016-08-08T00:00:00Z,Baseline,POLE,L2244F,-,8294,3016,1089,534,Germline,-,-,-,yes
+27,"CHIP, plasma",2015-04-08T00:00:00Z,Baseline,BRCA1,D693N,chr17.fa:41245471-41245471_C_T,1214,1057,1908,936,Germline,-,-,0.81910000000000005,yes
+286,"CHIP, plasma",2018-06-11T00:00:00Z,Baseline,BRCA2,V894I,-,3714,1881,1165,573,Germline,-,-,-,yes
+58,"CHIP, plasma",2016-02-17T00:00:00Z,Baseline,BRCA2,D2913E,-,4122,2052,1128,555,Germline,-,-,-,yes
+213,"CHIP, plasma",2017-11-09T00:00:00Z,Baseline,BRCA2,A2951T,-,352,161,920,453,Germline,-,-,0.34,yes
+68,"CHIP, plasma",2016-04-20T00:00:00Z,Baseline,BRCA2,A2951T,-,24,5,1553,789,Germline,-,-,0.48,yes
+45,"CHIP, plasma",2016-01-06T00:00:00Z,Baseline,BRCA1,S1040N,-,1250,522,1585,807,Germline,-,-,0.48,yes
+68,"CHIP, plasma",2016-04-20T00:00:00Z,Baseline,ROS1,R1942W,-,527,147,2305,1178,Germline,-,-,ND,yes
