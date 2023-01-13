@@ -50,8 +50,10 @@ lik.chip <- function(y.p, n.p, y.w, n.w, thetas, p.theta){
 #' @param samples # of samples for Monte Carlo integration
 #' @param prior.odds P(mutation being somatic) / P(mutation being hematopoietic)
 #' @return the posterior odds of the mutation being somatic
+#' @examples 
+#' bayes.factor(1541, 4, 946, 0)
 #'@export
-posterior.odds <- function(pdmr, pdr, wdmr, wdr, data=NULL, cols=NULL, samples=1e6, prior.odds=1){
+bayes.factor <- function(pdmr, pdr, wdmr, wdr, data=NULL, cols=NULL, samples=1e6, prior.odds=1){
 
     if (!is.null(data)){
 
@@ -81,11 +83,30 @@ posterior.odds <- function(pdmr, pdr, wdmr, wdr, data=NULL, cols=NULL, samples=1
 
     bayes.factor <- lik.SOMATIC / lik.CHIP
 
-    posterior.odds <-  bayes.factor * prior.odds
+    return(bayes.factor)
 
-    posterior.odds <- ifelse(!is.finite(posterior.odds), 1e100, posterior.odds)
 
-    return(posterior.odds)
+}
+
+#' Posterior Odds of a mutation being somatic
+#' @param bayes.factors is a vector of bayes factors computed from the function bayes.factors() provided in this package
+#' @return a vector of posterior odds 
+#' @examples 
+#' posterior.odds(2, 1)
+#' @export
+posterior.odds <- function(bayes.factors, prior.odds=1){
+
+    if (length(prior.odds)!=length(bayes.factors)){
+
+        prior.odds <- prior.odds[1]
+
+    }
+
+    post.odds <-  bayes.factors * prior.odds
+
+    post.odds <- ifelse(!is.finite(post.odds), 1e100, post.odds)
+
+    return(post.odds)
 
 }
 

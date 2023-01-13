@@ -1,0 +1,27 @@
+model{
+	for (i in 1:N){
+
+		#for one mutation (i.e., one row of the data frame)
+		#dbin written as (x, p, n)
+
+		#yw is number of mutant reads in wbc
+		#nw is total reads in wbc
+		#yp is number of mutant reads in plasma
+		#np is number of total reads in plasma
+
+		out[i] <- pyw[i]*pyp[i]*pt_p[i]*pt_w[i]
+
+		pyw[i] <- dbin(yw[i], theta_w[i], nw[i])
+
+		pyp[i] <- dbin(yp[i], theta_p[i], np[i])
+
+		pt_p[i] <- dbeta(theta_p[i], a_flat, b_flat)
+
+		pt_w[i] <- dbeta(theta_w[i], a_tail, b_tail)
+
+		theta_p[i] ~ dbeta(a_flat, b_flat)
+
+		theta_w[i] ~ dbeta(a_tail, b_tail)
+
+	}
+}

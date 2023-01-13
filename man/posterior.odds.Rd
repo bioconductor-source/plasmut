@@ -2,39 +2,19 @@
 % Please edit documentation in R/posteriorodds.R
 \name{posterior.odds}
 \alias{posterior.odds}
-\title{Compute the likelihood of a given plasma mutation being somatic in origin}
+\title{Posterior Odds of a mutation being somatic}
 \usage{
-posterior.odds(
-  pdmr,
-  pdr,
-  wdmr,
-  wdr,
-  data = NULL,
-  cols = NULL,
-  samples = 1e+06,
-  prior.odds = 1
-)
+posterior.odds(bayes.factors, prior.odds = 1)
 }
 \arguments{
-\item{pdmr}{vector of distinct mutant reads in plasma for different mutations}
-
-\item{pdr}{vector of distinct reads in plasma for different mutations}
-
-\item{wdmr}{vector of distinct mutant reads in wbc for different mutations}
-
-\item{wdr}{vector of distinct reads in wbc for different mutations}
-
-\item{data}{data frame with the pdmr, pdr, wdmr, and wdr information as column and rows correspond to different mutations}
-
-\item{cols}{vector of column names to use (cols[1] refers to pdmr, etc.)}
-
-\item{samples}{# of samples for Monte Carlo integration}
-
-\item{prior.odds}{P(mutation being somatic) / P(mutation being hematopoietic)}
+\item{bayes.factors}{is a vector of bayes factors computed from the function bayes.factors() provided in this package}
 }
 \value{
-the posterior odds of the mutation being somatic
+a vector of posterior odds
 }
 \description{
-Compute the likelihood of a given plasma mutation being somatic in origin
+Posterior Odds of a mutation being somatic
+}
+\examples{
+posterior.odds(2, 1)
 }

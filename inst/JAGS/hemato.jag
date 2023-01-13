@@ -1,0 +1,29 @@
+model{
+	for (i in 1:N){
+
+		#for one mutation (i.e., one row of the data frame)
+		#dbin written as (x, p, n)
+
+		#yw is number of mutant reads in wbc
+		#nw is total reads in wbc
+		#yp is number of mutant reads in plasma
+		#np is number of total reads in plasma
+
+		out[i] <- pyw[i]*pyp[i]*pt_w[i]*pt_p[i]
+
+		pyw[i] <- dbin(yw[i], theta_w[i], nw[i])
+
+		pyp[i] <- dbin(yp[i], theta_p[i], np[i])
+
+		pt_w[i] <- dbeta(theta_w[i], a_flat, b_flat)
+
+		#I am not sure how to get the probability density with truncation. Adding T(0,1) to the end of this statement yeilds an error and I have not been able to find another solution. 
+		pt_p[i] <- dnorm(theta_p[i], theta_w[i], prec)
+
+		theta_w[i] ~ dbeta(a_flat, b_flat)
+
+		theta_p[i] ~ dnorm(theta_w[i], prec) T(0,1)
+
+	}
+
+}
