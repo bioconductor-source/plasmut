@@ -8,7 +8,7 @@ vignette: >
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
-An example workflow of the plasmut package is shown using data from the CAIRO5 study (van't Erve and Medina et. al 2022). For a group of patients with cancer, both cell-free DNA and white blood cell DNA were sequenced. The distinct and total reads for each mutation present in cell-free DNA are displayed in the data. Corresponding white blood cell total and distinct reads are displayed as well. 
+An example workflow of the plasmut package is shown using data from the CAIRO5 study (van't Erve and Medina et. al 2022). For a group of patients with cancer, both cell-free DNA and white blood cell DNA were sequenced. The distinct and total reads for each mutation present in cell-free DNA are displayed in the data. Corresponding white blood cell total and distinct reads are displayed as well.
 
 From this information, we wish to assign labels to each of the mutations. Specifically, for mutations seen in cell-free DNA and not in white blood cells (distinct reads wbc = 0), we estimate the probability that the mutation arises from the tumor. This is done in a Bayesian framework and approximates integrals as Monte Carlo sums. Please see the paper for a workthrough of the math underlying this. Additionally, for mutations seen in white blood cells and cell-free DNA, we classify them as either hematopoietic or germline variants in an unsupervised manner.
 
@@ -18,49 +18,65 @@ library(tidyverse)
 library(readxl)
 ```
 
-Read in the data and convert columns to their natural types. 
+Read in the data and convert columns to their natural types.
+
 ```{r load data}
 extdir <- system.file("extdata", package="plasmut")
 fpath <- file.path(extdir, "cairo5-matched-sequencing.csv")
-
-df <- read_csv(fpath, show_col_types=FALSE) %>% type.convert(as.is=TRUE)
-
-df
+df <- read_csv(fpath) %>% type.convert(as.is=TRUE)
 ```
 
-Call the plasmut function bayes.factor() to compute bayes factors for the probability that a mutation is tumor derived. 
-```{r compute bayes factors}
-bayesfactors <- bayes.factor(data=df, cols=c("cfDNA distinct mutant reads","cfDNA distinct reads","wbc distinct mutant reads","wbc distinct reads")) 
+Call the plasmut function posterior.odds() and posterior.probability() that computes the probability of a mutation being tumor derived.
+
+@Commments:
+- before computing the posterior odds, we should show how to derive the bayes factor
+- the posterior odds does not require a function.  It is just the bayes factor times the prior odds.
+- how is `cols` checked? Should we require that this be a named vector with names that map to pdmr, pdr, ...?
+- each function we export should have a working example
+- should we adopt the convention of `_` instead of `.` in function names?
+
+```{r compute probability of tumor-derived mutation}
+cols <- c("cfDNA distinct mutant reads",
+          "cfDNA distinct reads",
+          "wbc distinct mutant reads",
+          "wbc distinct reads")
+podds <- posterior.odds(data=df,
+                        cols=cols,
+                        prior.odds=1) %>%
+    posterior.probability()
 ```
 
-posterior.odds() multiplies each bayes factor to its prior. It is assumed, unless specified, that the prior is 1 indicating an equal prior possibility of each mutation being hematopoeitic or tumor derived. The second, optional argument to posterior.odds() is a vector corresponding to the prior for each mutation being considered. 
+Call the plasmut function `stratify_wbc_vars` that identifies which white blood cell mutants are germline versus hematopoietic.
 
-posterior.probability() computes the probability of a mutation being tumor derived. 
-```{r compute probability of tumor specific alteration}
-posteriorodds <- posterior.odds(bayesfactors)
-prob <- posterior.probability(posteriorodds)
-```
-
-
-Call the plasmut function stratify_wbc_vars that identifies which white blood cell mutants are germline versus hematopoietic. 
 ```{r stratify wbc variants}
-wbc.var.type <- stratify_wbc_vars(data=df, cols=c("cfDNA distinct mutant reads","cfDNA distinct reads","wbc distinct mutant reads","wbc distinct reads"))
+wbc.var.type <- stratify_wbc_vars(data=df,
+                                  cols=cols)
 ```
 
-Compute mutant allele fractions (MAFs) and clean data. The first few alterations' bayes factors and somatic probability are shown. 
+Compute mutant allele fractions (MAFs) and clean data.
 
 ```{r data cleaning and organization}
-df <- df %>% mutate(prob.tumor.specific=prob, wbc.var.type=wbc.var.type, bayes.factor=bayesfactors) %>% mutate(wbcmaf=`wbc distinct mutant reads`/`wbc distinct reads`, cfdnamaf=`cfDNA distinct mutant reads`/`cfDNA distinct reads`) %>% mutate(cfdnamaf=ifelse(is.nan(cfdnamaf), 0, cfdnamaf))
+df <- df %>%
+    mutate(prob.tumor.specific=podds, ##@This argument should be post_odds or similar as it is an odds and not a probability
+           wbc.var.type=wbc.var.type) %>%
+    mutate(wbcmaf=`wbc distinct mutant reads`/`wbc distinct reads`,
+           cfdnamaf=`cfDNA distinct mutant reads`/`cfDNA distinct reads`) %>%
+    mutate(cfdnamaf=ifelse(is.nan(cfdnamaf), 0, cfdnamaf))
 
 df <- df %>% filter(g_include == "yes")
 
 df %>% relocate(Gene, Patient, prob.tumor.specific, bayes.factor, cfdnamaf, wbcmaf) %>% head()
 ```
 
-We estimate the probability of a mutation being somatic (tumor-derived) using only information from cell-free DNA and white blood cells with posterior.odds() and posterior.probability(). We can assess the accuracy of this method by sequencing the tumor and observing whether the mutation is found there. We sequenced 42 cases where the tumor displayed the same variant as the cell-free DNA. Our estimation procedure assigned a probability of tumor of 1 to 41 of these cases and a probability of 0.987 to the other, which was consistent with the tumor sequencing results. 
+We estimate the probability of a mutation being somatic (tumor-derived) using only information from cell-free DNA and white blood cells with posterior.odds() and posterior.probability(). We can assess the accuracy of this method by sequencing the tumor and observing whether the mutation is found there. We sequenced 42 cases where the tumor displayed the same variant as the cell-free DNA. Our estimation procedure assigned a probability of tumor of 1 to 41 of these cases and a probability of 0.987 to the other, which was consistent with the tumor sequencing results.
 
 ```{r estimation accuracy}
-df %>% select(cfdnamaf, wbcmaf, prob.tumor.specific, type) %>% filter(type=="Tumor-confirmed") %>% mutate(prob.tumor.specific = round(prob.tumor.specific, 3)) %>% group_by(prob.tumor.specific) %>% summarize(category=unique(type), n=n())
+df %>% select(cfdnamaf, wbcmaf, prob.tumor.specific, type) %>%
+    filter(type=="Tumor-confirmed") %>%
+    ## @ again, this is an odds and not a probability
+    mutate(prob.tumor.specific = round(prob.tumor.specific, 3)) %>%
+    group_by(prob.tumor.specific) %>%
+    summarize(category=unique(type), n=n())
 ```
 
 Finally, we can visualize the results of this approach
@@ -74,7 +90,7 @@ df <- df %>% mutate(shapestatus=ifelse(type=="Tumor-confirmed", "Tumor confirmed
 cfvar_plot <- ggplot(df, aes(x=wbcmaf, y=cfdnamaf)) +
     geom_jitter(aes(color = prob, fill = status, shape=shapestatus),
                 fill = "black", stat = "identity", lwd = 3, width = 0.1, alpha = 0.7) +
-    scale_color_gradientn(colors = c("red3", "orange", "blue", "black", "black", "orange"), 
+    scale_color_gradientn(colors = c("red3", "orange", "blue", "black", "black", "orange"),
                           na.value = "transparent",
                           breaks=c(0.6, 0.8, 1, 2, 0),
                           labels=c(0.6, 0.8, 1,"Germline variants", "Hematopoietic variants"),
@@ -87,10 +103,10 @@ cfvar_plot <- ggplot(df, aes(x=wbcmaf, y=cfdnamaf)) +
                        breaks=c(0.000084, 0.001, 0.01,  0.1, 1),
                        trans='log10',
                        oob = scales::squish_infinite) +
-    scale_shape_manual(values = c(17, 16)) + 
+    scale_shape_manual(values = c(17, 16)) +
     labs(x="White blood cell MAF (%)",
           y="cfDNA MAF (%)")+
-    theme_bw() + 
+    theme_bw() +
     theme(
       plot.background = element_blank(),
       panel.grid.major = element_blank(),
@@ -114,7 +130,7 @@ cfvar_plot <- ggplot(df, aes(x=wbcmaf, y=cfdnamaf)) +
 
 cfvar_plot + theme(axis.title=element_text(size=16), axis.text=element_text(size=13), legend.text=element_text(size=12), legend.title=element_text(size=14))
 ```
-There are a number of mutations with a probability of being tumor specific below 0.9. We can notice that although the white blood cell MAF is zero for these mutations, the number of cell-free DNA mutant reads is very low relative to the total reads. This naturally, introduces some doubt into our minds as to whether the mutant reads are tumor specific, or arising from a different process / tissue. This uncertainty is quantified in our method with reduced probability estimates, something a binary "tumor or not" approach does not capture. 
+There are a number of mutations with a probability of being tumor specific below 0.9. We can notice that although the white blood cell MAF is zero for these mutations, the number of cell-free DNA mutant reads is very low relative to the total reads. This naturally, introduces some doubt into our minds as to whether the mutant reads are tumor specific, or arising from a different process / tissue. This uncertainty is quantified in our method with reduced probability estimates, something a binary "tumor or not" approach does not capture.
 ```{r lower probability tumor specific mutations}
 df %>% filter(wbcmaf == 0) %>% arrange(prob) %>% select(prob, `cfDNA distinct mutant reads`, `cfDNA distinct reads`, `wbc distinct mutant reads`, `wbc distinct reads`, type, Gene, Patient) %>% slice(1:10)
 ```
@@ -131,11 +147,11 @@ plt <- df %>% select(prob.tumor.specific, bayes.factor, cfdnamaf, wbcmaf, Gene, 
 ```{r tile plot, height=6, width=10}
 
 #gene by patient matrix
-#each tile is the mutation: 
+#each tile is the mutation:
   # colored by whether it is hematopoeitic / germline / somatic
-      
-  # colored by if bayes factor is above a certain level 
-    # this level is such that the probability of somatic is greater than 0.9 
+
+  # colored by if bayes factor is above a certain level
+    # this level is such that the probability of somatic is greater than 0.9
         # df %>% filter(prob.tumor.specific > 0.9) %>% pull(bayes.factor) %>% min() --> 18.01
 
 
@@ -157,4 +173,3 @@ fig
 ```{r sample columns of data frame to show for paper}
 df %>% select(Gene, Patient, `cfDNA distinct mutant reads`, `cfDNA distinct reads`, `wbc distinct reads`, `wbc distinct mutant reads`) %>% slice(1:4)
 ```
-
