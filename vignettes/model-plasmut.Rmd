@@ -12,7 +12,7 @@ library(rjags)
 ```
 
 
-```{r}
+```{r data}
 
 extdir <- system.file("extdata", package="plasmut")
 fpath <- file.path(extdir, "cairo5-matched-sequencing.csv")
@@ -23,80 +23,125 @@ data <- df %>% select(8:11) %>% magrittr::set_colnames(c("np", "yp", "nw", "yw")
 
 ```
 
-We estimate the probability of a given mutation being somatic (tumor-derived) by first estimating the bayes factor and transforming that into a probability (bayes factor * prior odds then doing x / (1 + x)).  
+We estimate the probability that a mutation identified from cfDNA analyses is somatic (tumor-derived) by first estimating the bayes factor and transforming that into a probability (bayes factor * prior odds then doing x / (1 + x)).
 
-We estimate the bayes factor by finding the likelihood of somatic and likelihood of hematopoietic and dividing the two. 
+We estimate the bayes factor by finding the marginal likelihoods for somatic- and  hematopoietic-derived mutations.
 
-For the hematopoietic likelihood, we let theta_w (the true but unobserved MAF in WBC) be uniform across 0 to 0.5 (min and max parameters set below) and theta_p is drawn from a normal centered around theta_w with variance of 10 truncated on the unit interval. 
+M_s:   model that mutation is tumor derived.  If mutation is tumor derived, there could also be CTCs and non-zero MAFs in WBCs.
 
-```{r}
+M_w:  model that mutation is derived from WBCs, whether germline or CH. There would be no CTCs with this mutation in model W.
+
+theta_s: MAF of mutation in cfDNA
+
+y_s: observed mutation frequency in cfDNA. n_s is total number of distinct reads at this position
+
+theta_w: MAF of mutation from WBC sequencing.  Sequenced cells can be a mixture of WBCs and CTCs.
+
+y_w: observed mutation frequency from WBC sequencing. n_w is total number of distinct reads at this position
+
+p(M_S | data) is the posterior probability of model S.  Using Bayes rule and ignoring the demoninator, we have
+
+p(M_S | data) propto p(data | M_s) p(M_s)
+
+The first term on the RHS is the marginal likelihood of the data under model S.  Referred to as marginal likelihood because there are no thetas.  Rewriting this term:
+
+\begin{aligned}
+p(data | M_s) &= \int_\theta p(data, \theta_w, \theta_s | M_s) d\theta\\
+              &= \int_\theta p(data | \theta_w, \theta_s, M_s) p(\theta_w, \theta_s | M_s)d\theta\\
+              &= \int_\theta p(y_s, n_s | \theta_s)p(y_w, n_w | \theta_w) p(\theta_w | M_s) p(\theta_s | M_s)
+\end{aligned}
+
+The overall level of a mutation in plasma may reflect the size of the tumor, vascularization, rate of cell turnover, whether mutation is clonal or subclonal and volume of blood.  While these same factors may influence the number of CTCs that are captured in the WBC sequencing, we assume a priori that theta_w and theta_s are independent.
+
+Specification of priors $p(\theta_w | M_s)$ and $p(\theta_s | M_s)$:
+
+\begin{aligned}
+\theta_s | M_s &\sim \text{Beta}(1, 10)\\
+\theta_w | M_s &= \omega \times Z ~\text{where}\\
+\omega &\sim \text{Bernoulli}(10^{-3})\\
+Z &\sim \text{Beta}(1, 10)
+\end{aligned}
+
+Monte Carlo approximation of $p(M_s | data)$:
+
+1.  Obtain Monte Carlo samples of Z, $\omega$ and $\theta_s$ from their respective prior distributions
+2.  Compute $\theta_w$
+3.  Compute the likelihood of data for each $\theta_w$ and $\theta_s$ (the two likelihoods are each binomial)
+4.  Multiply the likelihoods by the prior
+5.  Approximate the integral by the mean
+
+
+
+To obtain the hematopoietic marginal likelihood we integrate over the prior distribution for the mutation allele frequency (MAF) in WBCs, denoted by $\theta_w$.  Similarly, the marginal likelihood that the mutation is tumor-derived is obtained by integrating over a prior for $\theta_p$.  The default prior for $\theta_p$ is a truncated normal distribution centered around theta_w with variance of 10 truncated on the unit interval.
+
+```{r probabilities, eval=FALSE}
 compute_probability_somatic <- function(data, somatic_model_choice="wbc_point_mass_on_zero", hemato_model_choice="equal_theta", theta_w_a_param_somatic=0.00001, theta_w_b_param_somatic=100, theta_p_var_hemato=2, theta_p_a_param_somatic=1, theta_p_b_param_somatic=1, prior.odds=1){
   #*_flat represents the theta_p prior
   data$a_flat <- theta_p_a_param_somatic
   data$b_flat <- theta_p_b_param_somatic
-    
+
   if (somatic_model_choice == "wbc_point_mass_on_zero"){
-    
+
     somatic_model <- system.file(file.path("JAGS", "somatic-no-tail.jag"), package = "plasmut", mustWork = TRUE)
     theta_vars <- c("theta")
-    
+
   } else {
-    
+
     somatic_model <- system.file(file.path("JAGS", "somatic.jag"), package="plasmut", mustWork = TRUE)
     theta_vars <- c("theta_w", "theta_p")
-    
+
     #prior parameters for beta distributions for theta_p and theta_w
     #*_tail represents the theta_w prior
-    
+
     data$a_tail <- theta_w_a_param_somatic
     data$b_tail <- theta_w_b_param_somatic
   }
-  
-  
+
+
   if (hemato_model_choice == "equal_theta"){
-      
+
     hemato_model <- system.file(file.path("JAGS", "hemato-equal-theta.jag"), package="plasmut", mustWork = TRUE)
     theta_vars_h <- c("theta")
   } else{
-    
+
     hemato_model <- system.file(file.path("JAGS", "hemato.jag"), package="plasmut", mustWork = TRUE)
     theta_vars_h <- c("theta_w", "theta_p")
   }
-  
+
   #number of mutations to estimate probabilities for
   data$N <- length(data$np)
-  
+
   #for hematopoietic model
   data$min <- 0
   data$prec <- 1 / sqrt(theta_p_var_hemato)
-  
+
   fit.s <- rjags::jags.model(somatic_model, data=data, n.chains=2, n.adapt=2000)
-  
+
   samples.s <- rjags::coda.samples(fit.s,
   	                         variable.names=c(theta_vars, "out"),
   	                          n.iter=1e5,
   	                          thin=10)
-  
+
   fit.h <- rjags::jags.model(hemato_model, data=data, n.chains=2, n.adapt=2000)
-  
+
   samples.h <- rjags::coda.samples(fit.h,
   	                         variable.names=c(theta_vars_h, "out"),
   	                          n.iter=1e5,
   	                          thin=10)
-  
+
   somatic <- ggmcmc::ggs(samples.s) %>% filter(grepl("out", Parameter)) %>% group_by(Chain, Parameter) %>% summarize(v=mean(value)) %>% ungroup() %>% group_by(Parameter) %>% summarize(lik=mean(v))
-  
-  
+
+
   hemato <- ggmcmc::ggs(samples.h) %>% filter(grepl("out", Parameter)) %>% group_by(Chain, Parameter) %>% summarize(v=mean(value)) %>% ungroup() %>% group_by(Parameter) %>% summarize(lik=mean(v))
-  
+
   bf <- somatic$lik / hemato$lik
-  
+
   posterior.odds <- bf * prior.odds
-  
+
   posterior.odds <- unlist(lapply(posterior.odds, function(x) ifelse(!is.finite(x), 1e100, x)))
-  
+
   p <- posterior.odds / (1 + posterior.odds)
-  
+
   return(list(bf=bf, p=p))
 }
 
@@ -114,65 +159,48 @@ point_mass_results <- compute_probability_somatic(data, somatic_model_choice="wb
 ```
 
 Each model describes a type of model and the results from it. There are a few decisions to make with respect to modeling that the code chunks and their comments below should help inform:
-  - Should we allow theta_w to be non-zero in the somatic model? Allowing for a slightly non-zero theta_w accomodates for possible CTCs. 
-  
-    My recommendation: I think this should be a user choice. We allow for users to specify whether they would like to let theta_w be non-zero (and what the prior parmaeters are) or zero. It is not our choice to choose here especially because we do not know much about CTCs. 
-  
-  - Should we let theta_p be sampled around theta_w OR set theta_p = theta_w in the hematopoietic model? Allowing for theta_p sampling around theta_w let's there be some wiggle room around the unobserved mutant allele fractions in these isolates. 
-  
-    My recommendation: I do not have a strong preference or reasoning here. Will do what you think is best. 
-    
-Please let me know how you would like to approach these modeling questions and I can make the changes to the package. Then, we can finish the manuscript text. 
-  
+  - Should we allow theta_w to be non-zero in the somatic model? Allowing for a slightly non-zero theta_w accomodates for possible CTCs.
 
-```{r}
+    My recommendation: I think this should be a user choice. We allow for users to specify whether they would like to let theta_w be non-zero (and what the prior parmaeters are) or zero. It is not our choice to choose here especially because we do not know much about CTCs.
+
+  - Should we let theta_p be sampled around theta_w OR set theta_p = theta_w in the hematopoietic model? Allowing for theta_p sampling around theta_w let's there be some wiggle room around the unobserved mutant allele fractions in these isolates.
+
+    My recommendation: I do not have a strong preference or reasoning here. Will do what you think is best.
+
+Please let me know how you would like to approach these modeling questions and I can make the changes to the package. Then, we can finish the manuscript text.
+
+
+```{r terrible_formatting, eval=FALSE}
 #traditional results (theta_w = 0 in somatic; theta_p = theta_w in hematopoietic) with prior model implemented in bayesian framework
 #Results are consistent with simulation in R method.
-#There are 5 mutations for which the p(somatic) < 0.9 and they are given an assignment label as likely tumor by Jamie et. al. 
-#All 4 CTCs have probability of tumor derived  = 0 
+#There are 5 mutations for which the p(somatic) < 0.9 and they are given an assignment label as likely tumor by Jamie et. al.
+#All 4 CTCs have probability of tumor derived  = 0
 df %>% mutate(prob.tumor.specific=trad_results$p) %>% mutate(wbcmaf=`wbc distinct mutant reads`/`wbc distinct reads`, cfdnamaf=`cfDNA distinct mutant reads`/`cfDNA distinct reads`) %>% mutate(cfdnamaf=ifelse(is.nan(cfdnamaf), 0, cfdnamaf))  %>% select(Gene, Patient, prob.tumor.specific, cfdnamaf, wbcmaf, `wbc distinct mutant reads`,`wbc distinct reads`,`cfDNA distinct mutant reads`,`cfDNA distinct reads`, type, g_include) %>% filter((g_include == "yes" | type == "Circulating Tumor Cell")) %>% filter(prob.tumor.specific < 0.9) %>% filter(prob.tumor.specific > 0) %>% mutate(prob.tumor.specific = round(prob.tumor.specific, 3)) %>% arrange(prob.tumor.specific) %>% as.data.frame()
 ```
 
-```{r}
-#point_mass_results where the change relative to the traditional model is theta wbc to be non zero in somatic (zero with a tail). 
-#the way this is implemented is a beta distribution with alpha initialized to be very small and beta large. 
+```{r terrible_formatting2, eval=FALSE}
+#point_mass_results where the change relative to the traditional model is theta wbc to be non zero in somatic (zero with a tail).
+#the way this is implemented is a beta distribution with alpha initialized to be very small and beta large.
 #It would be best if theta_w had a large density on zero and a small tail - right now it is a beta with a close to zero but not truly zero peak. How can we make this change in JAGS?
-#All tumor derived mutations have p(somatic) 1, the 5 that we used to have p(somatic) < 1 are all reassigned as probability 1. 
-#We have two WBC variants with >5% probability of being tumor-derived. 3 CTCs have probability tumor specific of 1 and 1 CTC has probability tumor specific of 2e-20. 
+#All tumor derived mutations have p(somatic) 1, the 5 that we used to have p(somatic) < 1 are all reassigned as probability 1.
+#We have two WBC variants with >5% probability of being tumor-derived. 3 CTCs have probability tumor specific of 1 and 1 CTC has probability tumor specific of 2e-20.
 df %>% mutate(prob.tumor.specific=point_mass_results$p) %>% mutate(wbcmaf=`wbc distinct mutant reads`/`wbc distinct reads`, cfdnamaf=`cfDNA distinct mutant reads`/`cfDNA distinct reads`) %>% mutate(cfdnamaf=ifelse(is.nan(cfdnamaf), 0, cfdnamaf))  %>% select(Gene, Patient, prob.tumor.specific, cfdnamaf, wbcmaf, `wbc distinct mutant reads`,`wbc distinct reads`,`cfDNA distinct mutant reads`,`cfDNA distinct reads`, type, g_include) %>% filter((g_include == "yes" | type == "Circulating Tumor Cell")) %>% filter(prob.tumor.specific < 0.9) %>% filter(prob.tumor.specific > 0) %>% arrange(desc(prob.tumor.specific)) %>% mutate(prob.tumor.specific = round(prob.tumor.specific, 3)) %>% as.data.frame()
 ```
 
 
-```{r}
-#non_equal_results where the change relative to the traditional model is theta plasma sampled around theta wbc in hematopoietic. 
-#implemented by having theta_p ~ N(theta_w, sigma) T(0,1) where sigma is initialized to a small value. The probability density at a given theta_p is needed and I do this by using the entire normal distribution instead of the truncated version (I can't figure out how to constrain it to the truncated only part) 
-#All tumor derived mutations have p(somatic) 1, the 5 that we used to have p(somatic) < 1 are all reassigned as probability 1. 
-#All WBC variants and CTCs have probability zero of tumor derived. 
+```{r, terrible_formatting3, eval=FALSE}
+#non_equal_results where the change relative to the traditional model is theta plasma sampled around theta wbc in hematopoietic.
+#implemented by having theta_p ~ N(theta_w, sigma) T(0,1) where sigma is initialized to a small value. The probability density at a given theta_p is needed and I do this by using the entire normal distribution instead of the truncated version (I can't figure out how to constrain it to the truncated only part)
+#All tumor derived mutations have p(somatic) 1, the 5 that we used to have p(somatic) < 1 are all reassigned as probability 1.
+#All WBC variants and CTCs have probability zero of tumor derived.
 df %>% mutate(prob.tumor.specific=non_equal_results$p) %>% mutate(wbcmaf=`wbc distinct mutant reads`/`wbc distinct reads`, cfdnamaf=`cfDNA distinct mutant reads`/`cfDNA distinct reads`) %>% mutate(cfdnamaf=ifelse(is.nan(cfdnamaf), 0, cfdnamaf))  %>% select(Gene, Patient, prob.tumor.specific, cfdnamaf, wbcmaf, `wbc distinct mutant reads`,`wbc distinct reads`,`cfDNA distinct mutant reads`,`cfDNA distinct reads`, type, g_include) %>% filter((g_include == "yes" | type == "Circulating Tumor Cell")) %>% filter(prob.tumor.specific < 0.9) %>% as.data.frame()
 
 ```
 
-```{r}
-#point_non_equal_results where the change relative to traditional model is theta plasma sampled around theat wbc in hematpoietic AND theta wbc is zero with a tail in somatic model. 
-#All tumor derived mutations have p(somatic) 1, the 5 that we used to have p(somatic) < 1 are all reassigned as probability 1. 
+```{r terrible_formatting4, eval=FALSE}
+#point_non_equal_results where the change relative to traditional model is theta plasma sampled around theat wbc in hematpoietic AND theta wbc is zero with a tail in somatic model.
+#All tumor derived mutations have p(somatic) 1, the 5 that we used to have p(somatic) < 1 are all reassigned as probability 1.
 #CTC P(somatic) are 0.97, 0.42, 0, 0
-#We no longer have any tumor derived mutations with probabilities less than 1. 3 WBC variants have > 7 % probability of being tumor-derived. 
+#We no longer have any tumor derived mutations with probabilities less than 1. 3 WBC variants have > 7 % probability of being tumor-derived.
 df %>% mutate(prob.tumor.specific=point_non_equal_results$p) %>% mutate(wbcmaf=`wbc distinct mutant reads`/`wbc distinct reads`, cfdnamaf=`cfDNA distinct mutant reads`/`cfDNA distinct reads`) %>% mutate(cfdnamaf=ifelse(is.nan(cfdnamaf), 0, cfdnamaf))  %>% select(Gene, Patient, prob.tumor.specific, cfdnamaf, wbcmaf, `wbc distinct mutant reads`,`wbc distinct reads`,`cfDNA distinct mutant reads`,`cfDNA distinct reads`, type, g_include) %>% filter((g_include == "yes" | type == "Circulating Tumor Cell")) %>% filter(prob.tumor.specific < 0.9) %>% filter(prob.tumor.specific > 0) %>% arrange(desc(prob.tumor.specific)) %>% mutate(prob.tumor.specific = round(prob.tumor.specific, 3)) %>% as.data.frame()
 ```
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
