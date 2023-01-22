@@ -31,13 +31,15 @@ M_s:   model that mutation is tumor derived.  If mutation is tumor derived, ther
 
 M_w:  model that mutation is derived from WBCs, whether germline or CH. There would be no CTCs with this mutation in model W.
 
-theta_s: MAF of mutation in cfDNA
+theta_p: MAF of mutation in cfDNA
 
-y_s: observed mutation frequency in cfDNA. n_s is total number of distinct reads at this position
+y_p: observed mutation frequency in cfDNA. n_p is total number of distinct reads at this position
 
 theta_w: MAF of mutation from WBC sequencing.  Sequenced cells can be a mixture of WBCs and CTCs.
 
 y_w: observed mutation frequency from WBC sequencing. n_w is total number of distinct reads at this position
+
+## Model $M_s$
 
 p(M_S | data) is the posterior probability of model S.  Using Bayes rule and ignoring the demoninator, we have
 
@@ -46,17 +48,17 @@ p(M_S | data) propto p(data | M_s) p(M_s)
 The first term on the RHS is the marginal likelihood of the data under model S.  Referred to as marginal likelihood because there are no thetas.  Rewriting this term:
 
 \begin{aligned}
-p(data | M_s) &= \int_\theta p(data, \theta_w, \theta_s | M_s) d\theta\\
-              &= \int_\theta p(data | \theta_w, \theta_s, M_s) p(\theta_w, \theta_s | M_s)d\theta\\
-              &= \int_\theta p(y_s, n_s | \theta_s)p(y_w, n_w | \theta_w) p(\theta_w | M_s) p(\theta_s | M_s)
+p(data | M_s) &= \int_\theta p(data, \theta_w, \theta_p | M_s) d\theta\\
+              &= \int_\theta p(data | \theta_w, \theta_p, M_s) p(\theta_w, \theta_p | M_s)d\theta\\
+              &= \int_\theta p(y_p, n_p | \theta_p)p(y_w, n_w | \theta_w) p(\theta_w | M_s) p(\theta_p | M_s)d\theta
 \end{aligned}
 
 The overall level of a mutation in plasma may reflect the size of the tumor, vascularization, rate of cell turnover, whether mutation is clonal or subclonal and volume of blood.  While these same factors may influence the number of CTCs that are captured in the WBC sequencing, we assume a priori that theta_w and theta_s are independent.
 
-Specification of priors $p(\theta_w | M_s)$ and $p(\theta_s | M_s)$:
+Specification of priors $p(\theta_w | M_s)$ and $p(\theta_p | M_s)$:
 
 \begin{aligned}
-\theta_s | M_s &\sim \text{Beta}(1, 10)\\
+\theta_p | M_s &\sim \text{Beta}(1, 10)\\
 \theta_w | M_s &= \omega \times Z ~\text{where}\\
 \omega &\sim \text{Bernoulli}(10^{-3})\\
 Z &\sim \text{Beta}(1, 10)
@@ -64,15 +66,51 @@ Z &\sim \text{Beta}(1, 10)
 
 Monte Carlo approximation of $p(M_s | data)$:
 
-1.  Obtain Monte Carlo samples of Z, $\omega$ and $\theta_s$ from their respective prior distributions
+1.  Obtain Monte Carlo samples of Z, $\omega$ and $\theta_p$ from their respective prior distributions
 2.  Compute $\theta_w$
-3.  Compute the likelihood of data for each $\theta_w$ and $\theta_s$ (the two likelihoods are each binomial)
+3.  Compute the likelihood of data for each $\theta_w$ and $\theta_p$ (the two likelihoods are each binomial)
 4.  Multiply the likelihoods by the prior
 5.  Approximate the integral by the mean
 
+## Model $M_w$
 
 
-To obtain the hematopoietic marginal likelihood we integrate over the prior distribution for the mutation allele frequency (MAF) in WBCs, denoted by $\theta_w$.  Similarly, the marginal likelihood that the mutation is tumor-derived is obtained by integrating over a prior for $\theta_p$.  The default prior for $\theta_p$ is a truncated normal distribution centered around theta_w with variance of 10 truncated on the unit interval.
+
+While the coverage we see in plasma reflects chromatin structure and nucleosome positioning and possibly methylation, we assume that the numerator and denominator would be affected similarly.   With this assumption, whether a mutation is germline or CH the MAF in plasma cfDNA should be approximately the same as the MAF in sequenced WBCs. We assume that any differences in the empirical MAFs reflect sampling error.  Solving for the marginal likelihood, we have
+
+\begin{aligned}
+p(data | M_w) &= \int_\theta p(data, \theta | M_w) d\theta\\
+              &= \int_\theta p(data | \theta) p(\theta | M_w)d\theta\\
+              &= \int_\theta p(y_p, n_p, y_w, n_w | \theta)p(\theta | M_w)d\theta\\
+              &= \int_\theta p(y_p, n_p | \theta) p(y_w, n_w | \theta) p(\theta| M_W) d\theta
+\end{aligned}
+
+Prior for $\theta$:
+
+\begin{aligned}
+\theta | M_w &\sim \text{Beta}(1, 10)
+\end{aligned}
+
+Monte Carlo approximation of $p(M_w | data)$
+
+1. Obtain $\theta$ from its prior
+2. Compute $p(\theta | M_w)$
+3. Calculate the product of the two binomial likelihoods for the simulated $\theta$
+4. Take the product of steps (2) and (3)
+
+Steps 1-4 can be vectorized for a large Monte Carlo sample of $\theta$'s.
+
+5. Approximate the integral by the mean
+
+## Computing the Bayes factor
+
+The Bayes factor is the ratio of the 2 marginal likelihoods that we've approximated by Monte Carlo:
+
+\begin{align}
+\text{Bayes factor} &= \frac{p(data | M_s)}{p(data|M_w)}\\
+&\approx \frac{ \text{step 5 from } M_s}{\text{step 5 from }M_w}
+\end{align}
+
 
 ```{r probabilities, eval=FALSE}
 compute_probability_somatic <- function(data, somatic_model_choice="wbc_point_mass_on_zero", hemato_model_choice="equal_theta", theta_w_a_param_somatic=0.00001, theta_w_b_param_somatic=100, theta_p_var_hemato=2, theta_p_a_param_somatic=1, theta_p_b_param_somatic=1, prior.odds=1){
