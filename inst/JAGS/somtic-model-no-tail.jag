@@ -9,16 +9,15 @@ model{
 		#yp is number of mutant reads in plasma
 		#np is number of total reads in plasma
 
-		out[i] <- pyw[i]*pyp[i]*pt_p[i]
+		out[i] <- pyw[i]*pyp[i]*pt[i]
 
-		pyw[i] <- dbin(yw[i], theta[i], nw[i])
+		pyw[i] <- dbin(yw[i], 0, nw[i])
 
-		pt_p[i] <- dbeta(theta[i], a_flat, b_flat)
+		pyp[i] <- dbin(yp[i], theta[i], np[i])
 
-    pyp[i] <- dbin(yp[i], theta[i], np[i])
+		pt[i] <- dbeta(theta[i], a_p, b_p)
 
-		theta[i] ~ dbeta(a_flat, b_flat)
+		theta[i] ~ dbeta(a_p, b_p)
 
 	}
-
 }

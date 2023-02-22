@@ -15,13 +15,16 @@ model{
 
 		pyp[i] <- dbin(yp[i], theta_p[i], np[i])
 
-		pt_p[i] <- dbeta(theta_p[i], a_flat, b_flat)
+		pt_p[i] <- dbeta(theta_p[i], a_p, b_p)
 
-		pt_w[i] <- dbeta(theta_w[i], a_tail, b_tail)
+		pt_w[i] <- dbeta(z[i], a_w, b_w) * dbin(omega[i], rho, 1)
 
-		theta_p[i] ~ dbeta(a_flat, b_flat)
+		theta_p[i] ~ dbeta(a_p, b_p)
 
-		theta_w[i] ~ dbeta(a_tail, b_tail)
+		theta_w[i] <- omega[i] * z[i]
+
+    omega[i] ~ dbern(rho)
+    z[i] ~ dbeta(a_w, b_w)
 
 	}
 }
