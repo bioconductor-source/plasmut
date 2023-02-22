@@ -15,60 +15,65 @@ From this information, we wish to assign labels to each of the mutations. Specif
 ```{r setup, message=FALSE}
 library(plasmut)
 library(tidyverse)
-library(readxl)
+library(rjags)
+library(ggmcmc)
 ```
 
 Read in the data and convert columns to their natural types.
-
 ```{r load data}
 extdir <- system.file("extdata", package="plasmut")
 fpath <- file.path(extdir, "cairo5-matched-sequencing.csv")
-df <- read_csv(fpath) %>% type.convert(as.is=TRUE)
+
+df <- read_csv(fpath, show_col_types=FALSE) %>% type.convert(as.is=TRUE)
 ```
 
-Call the plasmut function posterior.odds() and posterior.probability() that computes the probability of a mutation being tumor derived.
+Here is what a sample of the relevant data from the dataframe looks like:  
+```{r sample columns of data frame to show for paper}
+df %>% select(Gene, Patient, `cfDNA distinct mutant reads`, `cfDNA distinct reads`, `wbc distinct reads`, `wbc distinct mutant reads`) %>% slice(1:4)
+```
 
-@Commments:
-- before computing the posterior odds, we should show how to derive the bayes factor
-- the posterior odds does not require a function.  It is just the bayes factor times the prior odds.
-- how is `cols` checked? Should we require that this be a named vector with names that map to pdmr, pdr, ...?
-- each function we export should have a working example
-- should we adopt the convention of `_` instead of `.` in function names?
+Select the relevant columns with total and mutant reads in cfDNA and white blood cell fractions for each mutation. (nw = total WBC reads, np = total cfDNA reads, pw = mutant WBC reads, pw = mutant cfDNA reads)  
+```{r get relevant data}
+data <- df %>% select(8:11) %>% magrittr::set_colnames(c("np", "yp", "nw", "yw")) %>% mutate(yw=ifelse(is.na(yw), 0, yw), nw = ifelse(is.na(nw), 1e8, nw)) %>% as.list()
+```
 
-```{r compute probability of tumor-derived mutation}
+Call the plasmut function `compute_p_tumor()` that computes the probability of a mutation being tumor derived.  
+
+We can adjust the `rho_ctc_parameter` in the `compute_p_tumor()` function to reflect our apriori assumptions about the fraction of cells in the buffy coat layer that are circulating tumor cells (CTCs). By default, it is assumed that `rho_ctc_parameter = 0`, but this can be changed. A value of 1e-3 may be a good place to start (1 CTC: 1000 WBCs) if CTCs are suspected to be present in the white blood cell fraction.  
+```{r compute prob tumor, warning=FALSE}
+model_results <- compute_p_tumor(data)
+```
+The object model_results contains two items, the bayes factors (`model_results$bf`) and the estimated tumor-specific probabilities (`model_results$p`).  
+
+
+Call the plasmut function `stratify_wbc_vars` that identifies which white blood cell mutants are germline versus hematopoietic.    
+
+```{r stratify wbc variants}
 cols <- c("cfDNA distinct mutant reads",
           "cfDNA distinct reads",
           "wbc distinct mutant reads",
           "wbc distinct reads")
-podds <- posterior.odds(data=df,
-                        cols=cols,
-                        prior.odds=1) %>%
-    posterior.probability()
-```
 
-Call the plasmut function `stratify_wbc_vars` that identifies which white blood cell mutants are germline versus hematopoietic.
-
-```{r stratify wbc variants}
 wbc.var.type <- stratify_wbc_vars(data=df,
                                   cols=cols)
 ```
 
-Compute mutant allele fractions (MAFs) and clean data.
+Compute mutant allele fractions (MAFs) for WBC and cell-free fractions. Also, clean data.  
 
 ```{r data cleaning and organization}
 df <- df %>%
-    mutate(prob.tumor.specific=podds, ##@This argument should be post_odds or similar as it is an odds and not a probability
+    mutate(prob.tumor.specific=model_results$p, bayes.factor=model_results$bf, 
            wbc.var.type=wbc.var.type) %>%
     mutate(wbcmaf=`wbc distinct mutant reads`/`wbc distinct reads`,
            cfdnamaf=`cfDNA distinct mutant reads`/`cfDNA distinct reads`) %>%
-    mutate(cfdnamaf=ifelse(is.nan(cfdnamaf), 0, cfdnamaf))
+    mutate(cfdnamaf=ifelse(is.nan(cfdnamaf), 0, cfdnamaf)) 
 
 df <- df %>% filter(g_include == "yes")
 
 df %>% relocate(Gene, Patient, prob.tumor.specific, bayes.factor, cfdnamaf, wbcmaf) %>% head()
 ```
 
-We estimate the probability of a mutation being somatic (tumor-derived) using only information from cell-free DNA and white blood cells with posterior.odds() and posterior.probability(). We can assess the accuracy of this method by sequencing the tumor and observing whether the mutation is found there. We sequenced 42 cases where the tumor displayed the same variant as the cell-free DNA. Our estimation procedure assigned a probability of tumor of 1 to 41 of these cases and a probability of 0.987 to the other, which was consistent with the tumor sequencing results.
+We can assess the accuracy of our estimation procedure by sequencing the tumor and observing whether the mutation is found there. We sequenced 42 cases where the tumor displayed the same variant as the cell-free DNA. Our estimation procedure assigned a probability of tumor of 1 to 41 of these cases and a probability of 0.998 to the other, which was consistent with the tumor sequencing results.
 
 ```{r estimation accuracy}
 df %>% select(cfdnamaf, wbcmaf, prob.tumor.specific, type) %>%
@@ -135,26 +140,23 @@ There are a number of mutations with a probability of being tumor specific below
 df %>% filter(wbcmaf == 0) %>% arrange(prob) %>% select(prob, `cfDNA distinct mutant reads`, `cfDNA distinct reads`, `wbc distinct mutant reads`, `wbc distinct reads`, type, Gene, Patient) %>% slice(1:10)
 ```
 
-```{r bayes factor relationship to cfDNA}
+We expect there to be a near linear relationship between the bayes factors and probabilities for a given mutation, which we can observe by plotting these two quantities.  
+```{r bayes factor relationship to cfDNA, fig.align="center", fig.width=5, fig.height=5, warning=FALSE, message=FALSE, echo=FALSE, results='hide'}
 cor.val <- df %>% select(prob.tumor.specific, bayes.factor, cfdnamaf, wbcmaf, Gene, Patient) %>% mutate(logbf=log(bayes.factor)) %>% filter(!is.infinite(logbf)) %>% select(cfdnamaf, logbf) %>% cor(method="spearman") %>% as_tibble() %>% slice(1) %>% pull(logbf) %>% round(2)
 
 corr <- paste0("Corr: ", cor.val)
 
-plt <- df %>% select(prob.tumor.specific, bayes.factor, cfdnamaf, wbcmaf, Gene, Patient) %>% mutate(logbf=log(bayes.factor)) %>% filter(!is.infinite(logbf)) %>% ggplot(aes(x=logbf, y=cfdnamaf)) + geom_point(size=1.5) + theme_bw() + ylab("cfDNA MAF") + xlab("log(Bayes Factor)") + theme(panel.grid.major=element_blank(), panel.grid.minor=element_blank()) + geom_smooth(method="loess", se = F) + geom_text(x=400, y=0.22, label=corr, size=4)
+plt <- df %>% select(prob.tumor.specific, bayes.factor, cfdnamaf, wbcmaf, Gene, Patient) %>% mutate(logbf=log(bayes.factor)) %>% filter(!is.infinite(logbf)) %>% ggplot(aes(x=logbf, y=cfdnamaf)) + geom_point(size=1.5) + theme_bw() + ylab("cfDNA MAF") + xlab("log(Bayes Factor)") + theme(panel.grid.major=element_blank(), panel.grid.minor=element_blank()) + geom_smooth(method="loess", se = F) 
+
+#+ geom_text(x=400, y=0.22, label=corr, size=4)
+
+plt
 ```
 
+Another way to represent the probability of tumor specific estimates for each mutation is to create a gene by patient matrix and label tiles according to their status. We color a tile based on whether the underlying mutation is actually hematopoietic, germline, or somatic and outline the tile based on whether the bayes factor is above a certain level. Here, we choose the bayes factor level of 18.01 such that any value greater than this number represents a probability of tumor specific estimate of 0.9.  
 
-```{r tile plot, height=6, width=10}
-
-#gene by patient matrix
-#each tile is the mutation:
-  # colored by whether it is hematopoeitic / germline / somatic
-
-  # colored by if bayes factor is above a certain level
-    # this level is such that the probability of somatic is greater than 0.9
-        # df %>% filter(prob.tumor.specific > 0.9) %>% pull(bayes.factor) %>% min() --> 18.01
-
-
+The accuracy of our method can be assessed by noting the concordance between tile outlines and colors. For example, bayes factor > 18.01 outlined tiles almost always have a color corresponding to tumor and bayes factor < 18.01 tiles almost always have a germline or hematopoietic color. 
+```{r tile plot, fig.height=6, fig.width=10, fig.align="center"}
 plt.df <- df %>% select(status, Gene, Patient, bayes.factor) %>% mutate(border=ifelse(bayes.factor > 18.01, "> 18.01", "Else")) %>% select(-bayes.factor) %>% mutate(alt.source=ifelse(status=="Likely tumor-specific", "Tumor", status)) %>% select(-status)
 
 ordered.levels <- plt.df %>% group_by(Gene) %>% summarize(n=n()) %>% arrange(desc(n)) %>% pull(Gene)
@@ -165,11 +167,5 @@ plt.df <- plt.df %>% left_join(gene.numbers, by=c("Gene"="Gene"))
 
 fig <- plt.df %>% ggplot(aes(y=factor(Gene, levels=ordered.levels), x=factor(Patient), fill=alt.source, color=border)) + geom_tile(size=1.25, alpha=0.7, width=0.85, height=0.75) + theme_minimal() + ylab("Gene") + xlab("Patient") + theme(panel.grid.major=element_blank()) + theme(axis.text.x=element_blank()) + scale_color_manual(values=c("firebrick", "darkblue"), name="Bayes Factor") + scale_fill_manual(values=c("mediumorchid", "cornflowerblue", "sienna"), name="Alteration\nSource")
 
-#10x6
 fig
-```
-
-
-```{r sample columns of data frame to show for paper}
-df %>% select(Gene, Patient, `cfDNA distinct mutant reads`, `cfDNA distinct reads`, `wbc distinct reads`, `wbc distinct mutant reads`) %>% slice(1:4)
 ```

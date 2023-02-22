@@ -11,10 +11,12 @@ LazyData: true
 RoxygenNote: 7.2.1
 Imports:
     tidyverse,
-    magrittr, 
+    magrittr,
     scales,
-    qpdf
-Suggests: 
+    qpdf,
+    rjags,
+    ggmcmc
+Suggests:
     knitr,
     rmarkdown
 VignetteBuilder: knitr

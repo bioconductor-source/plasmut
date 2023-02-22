@@ -1,3 +1,15 @@
+#' Strip a column of a dataframe into a vector
+#' @import tidyverse
+#' @param data a data frame.
+#' @param col.idx the column name or column number
+#' @return a vector of the selected column
+strip.column <- function(data, col.idx=1){
+
+    x <- data %>% as.list()
+
+    return(x[[col.idx]])
+}
+
 #' handle mutations with a non-zero white blood cell mutant read count
 #' @import tidyverse
 #' @import qpdf
