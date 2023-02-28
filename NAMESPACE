@@ -2,7 +2,7 @@
 
 export(compute_p_tumor)
 export(stratify_wbc_vars)
-import(ggmcmc)
+import(magrittr)
 import(qpdf)
 import(rjags)
 import(tidyverse)

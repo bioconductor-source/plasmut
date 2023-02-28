@@ -46,8 +46,6 @@ compute_p_tumor(
 \item{iter}{number of iterations for each chain, default 1e5}
 
 \item{nthin}{thinning value, take every nth value of chain, default 10}
-
-\item{samples}{# of samples for Monte Carlo integration}
 }
 \value{
 list with two named vectors - bf (bayes factor) and p (probbability of tumor-specific) for all mutations supplied into function

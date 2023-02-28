@@ -17,6 +17,7 @@ strip.column <- function(data, col.idx=1){
 #' @param pdr vector of distinct reads in plasma for different mutations
 #' @param wdmr vector of distinct mutant reads in wbc for different mutations
 #' @param wdr vector of distinct reads in wbc for different mutations
+#' @param thresh user specificed threshold for wbcmaf to cluster wbc variant types instead of kmeans clustering
 #' @param data data frame with the pdmr, pdr, wdmr, and wdr information as column and rows correspond to different mutations
 #' @param cols vector of column names to use (cols[1] refers to pdmr, etc.)
 #' @return the vector representing the clusters to which the white blood cell variants belong to

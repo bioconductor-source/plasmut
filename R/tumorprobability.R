@@ -1,7 +1,7 @@
 #' Compute the likelihood of a given plasma mutation being somatic in origin
 #' @import tidyverse
 #' @import rjags
-#' @import ggmcmc
+#' @import magrittr
 #' @param data is a list with 4 named items (np = total distinct reads plasma, yp = mutant reads plasma, nw = total distinct reads wbc, yw = mutant reads wbc) 
 #' @param rho_ctc_parameter fraction of cells in buffy coat layer expected to be circulating tumor cells, default 0. If CTC suspected, 0.001 is a good starting point. 
 #' @param a_w_somatic shape beta parameter for informing wbc maf in somatic CTC model
@@ -15,7 +15,6 @@
 #' @param adapt number of iterations for burn in of each monte carlo chain, default 2000
 #' @param iter number of iterations for each chain, default 1e5
 #' @param nthin thinning value, take every nth value of chain, default 10
-#' @param samples # of samples for Monte Carlo integration
 #' @param prior.odds P(mutation being somatic) / P(mutation being hematopoietic)
 #' @return list with two named vectors - bf (bayes factor) and p (probbability of tumor-specific) for all mutations supplied into function
 #' @examples 
@@ -57,10 +56,10 @@ compute_p_tumor <- function(data, rho_ctc_parameter=0, a_w_somatic=1, b_w_somati
   	                          n.iter=iter,
   	                          thin=nthin)
 
-  somatic <- ggmcmc::ggs(samples.s) %>% filter(grepl("out", Parameter)) %>% group_by(Chain, Parameter) %>% summarize(v=mean(value)) %>% ungroup() %>% group_by(Parameter) %>% summarize(lik=mean(v))
+  somatic <- ggmcmc::ggs(samples.s) %>% dplyr::filter(grepl("out", Parameter)) %>% dplyr::group_by(Chain, Parameter) %>% dplyr::summarize(v=mean(value)) %>% dplyr::ungroup() %>% dplyr::group_by(Parameter) %>% dplyr::summarize(lik=mean(v))
 
 
-  hemato <- ggmcmc::ggs(samples.h) %>% filter(grepl("out", Parameter)) %>% group_by(Chain, Parameter) %>% summarize(v=mean(value)) %>% ungroup() %>% group_by(Parameter) %>% summarize(lik=mean(v))
+  hemato <- ggmcmc::ggs(samples.h) %>% dplyr::filter(grepl("out", Parameter)) %>% dplyr::group_by(Chain, Parameter) %>% dplyr::summarize(v=mean(value)) %>% dplyr::ungroup() %>% dplyr::group_by(Parameter) %>% dplyr::summarize(lik=mean(v))
 
   bf <- somatic$lik / hemato$lik
 

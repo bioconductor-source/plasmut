@@ -23,6 +23,8 @@ stratify_wbc_vars(
 
 \item{wdr}{vector of distinct reads in wbc for different mutations}
 
+\item{thresh}{user specificed threshold for wbcmaf to cluster wbc variant types instead of kmeans clustering}
+
 \item{data}{data frame with the pdmr, pdr, wdmr, and wdr information as column and rows correspond to different mutations}
 
 \item{cols}{vector of column names to use (cols[1] refers to pdmr, etc.)}
