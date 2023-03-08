@@ -1,0 +1,106 @@
+---
+title: "Analysis and visualization of data where no circulating tumor cells (CTCs) are expected to be in WBC fraction"
+author: "Adith S. Arun and Robert B. Scharpf"
+date: "`r format(Sys.Date())`"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{plasmut-zero-ctc}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+This vignette runs code that reads in data, estimates probability of tumor specific alteration for each variant, classifies non-tumor derived variants as hematopoieitc or germline in origin, and visualizes the output with the assumption that there is no CTCs in the sequenced white blood cell fraction. Much of the code is a repeat of that found in the plasmut.Rmd vignette. The important aspect of this vignette is the visualization at the end of the results of this no CTC model. 
+
+```{r setup, message=FALSE}
+library(plasmut)
+library(tidyverse)
+library(rjags)
+library(ggmcmc)
+```
+
+```{r load data}
+extdir <- system.file("extdata", package="plasmut")
+fpath <- file.path(extdir, "cairo5-matched-sequencing.csv")
+
+df <- read_csv(fpath, show_col_types=FALSE) %>% type.convert(as.is=TRUE)
+
+data <- df %>% select(8:11) %>% magrittr::set_colnames(c("np", "yp", "nw", "yw")) %>% mutate(yw=ifelse(is.na(yw), 0, yw), nw = ifelse(is.na(nw), 1e8, nw)) %>% as.list()
+```
+
+```{r estimate probabilities and classify variants}
+
+#rho defaults to zero indicating that we assume zero CTC prevalence in compute_p_tumor()
+model_results <- compute_p_tumor(data) 
+
+cols <- c("cfDNA distinct mutant reads",
+          "cfDNA distinct reads",
+          "wbc distinct mutant reads",
+          "wbc distinct reads")
+
+wbc.var.type <- stratify_wbc_vars(data=df,
+                                  cols=cols)
+df <- df %>%
+    mutate(prob.tumor.specific=model_results$p, bayes.factor=model_results$bf, 
+           wbc.var.type=wbc.var.type) %>%
+    mutate(wbcmaf=`wbc distinct mutant reads`/`wbc distinct reads`,
+           cfdnamaf=`cfDNA distinct mutant reads`/`cfDNA distinct reads`) %>%
+    mutate(cfdnamaf=ifelse(is.nan(cfdnamaf), 0, cfdnamaf)) %>% filter(g_include=="yes")
+
+```
+
+```{r visualization of no CTC model, fig.align="center", fig.width=9, fig.height=6, warning=FALSE}
+cluster.annotate <- df %>% select(wbc.var.type, cfdnamaf, wbcmaf) %>% group_by(wbc.var.type) %>% summarize(wbclevel=mean(wbcmaf)) %>% arrange(desc(wbclevel)) %>% filter(!is.na(wbc.var.type))
+
+df <- df %>% mutate(status = wbc.var.type) %>% mutate(status = ifelse(is.na(status), "Likely tumor-specific", wbc.var.type)) %>% mutate(status = ifelse(status==cluster.annotate$wbc.var.type[1], "Germline variants", status)) %>% mutate(status = ifelse(status==cluster.annotate$wbc.var.type[2], "Hematopoietic variants", status)) %>% mutate(prob=status) %>% mutate(prob=ifelse(status=="Likely tumor-specific", prob.tumor.specific, prob)) %>% mutate(prob=ifelse(status=="Germline variants", -2, prob), prob=ifelse(status=="Hematopoietic variants", -1, prob)) %>% mutate(prob=as.numeric(prob))
+
+df <- df %>% mutate(shapestatus=ifelse(type=="Tumor-confirmed", "Tumor confirmed\nby sequencing", "Tumor not sequenced"))
+
+cfvar_plot <- ggplot(df, aes(x=wbcmaf, y=cfdnamaf)) +
+    geom_jitter(aes(color = prob, fill = status, shape=shapestatus),
+                fill = "black", stat = "identity", lwd = 3, width = 0.1, alpha = 0.7) +
+    scale_color_gradientn(colors = c("red3", "red3", "red3", rep("orange", 15), "turquoise1", "deepskyblue", "dodgerblue4"),
+                          na.value = "transparent",
+                          breaks = c(-2, -1, 0.7, 0.8, 1),
+                          labels=c("Germline variants", "Hematopoietic variants", 0.7, 0.8, 1),
+                          limits=c(-2, 1)) +
+    scale_x_continuous(labels = scales::percent_format(accuracy = 0.1),
+                       breaks=c(0.000084, 0.001, 0.01,  0.1, 0.5),
+                       trans='log10',
+                       oob = scales::squish_infinite) +
+    scale_y_continuous(labels = scales::percent_format(accuracy = 0.1),
+                       breaks=c(0.000084, 0.001, 0.01,  0.1, 1),
+                       trans='log10',
+                       oob = scales::squish_infinite) +
+    scale_shape_manual(values = c(17, 16)) +
+    labs(x="White blood cell MAF (%)",
+          y="cfDNA MAF (%)")+
+    theme_bw() +
+    theme(
+      plot.background = element_blank(),
+      panel.grid.major = element_blank(),
+      panel.grid.minor = element_blank(),
+      panel.border = element_blank(),
+      plot.tag = element_text()) +
+    theme(axis.line = element_line(color = 'black')) +
+    theme(axis.text.x = element_text(vjust=1.2, hjust= 0.3)) 
+
+cfvar_plot <- cfvar_plot +
+    theme(#legend.direction = "vertical", legend.box = "horizontal",
+          legend.background = element_rect(fill = "transparent"),
+          legend.position="right", legend.direction="vertical",
+          #legend.position = c(0.47, 0.88),
+          legend.key = element_rect(size = 5), #legend.box.background = element_rect(colour = "black"),
+          legend.key.size = unit(0.4, "cm")) +
+    guides(color=guide_legend(title="Probability\nTumor-Specific", nrow = 6),
+           fill = guide_legend(title=""),
+           shape = guide_legend(title=""), nrow=2) +
+    geom_vline(xintercept=c(0.00015), linetype="dashed", size = 0.2) +
+    geom_vline(xintercept=c(0.00009), linetype="dashed", size = 0.2, color = NA) +
+    geom_vline(xintercept=c(0.25), linetype="dashed", size = 0.2) +
+    geom_abline(slope=1, intercept=0, color="gray", alpha = 0.4, size = 0.4)
+
+cfvar_plot + theme(axis.title=element_text(size=16), axis.text=element_text(size=13), legend.text=element_text(size=12), legend.title=element_text(size=14))
+```
+
+
+

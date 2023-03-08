@@ -41,7 +41,7 @@ Call the plasmut function `compute_p_tumor()` that computes the probability of a
 
 We can adjust the `rho_ctc_parameter` in the `compute_p_tumor()` function to reflect our apriori assumptions about the fraction of cells in the buffy coat layer that are circulating tumor cells (CTCs). By default, it is assumed that `rho_ctc_parameter = 0`, but this can be changed. A value of 1e-3 may be a good place to start (1 CTC: 1000 WBCs) if CTCs are suspected to be present in the white blood cell fraction.  
 ```{r compute prob tumor, warning=FALSE}
-model_results <- compute_p_tumor(data)
+model_results <- compute_p_tumor(data, rho=0.001) #rho is 1:1000
 ```
 The object model_results contains two items, the bayes factors (`model_results$bf`) and the estimated tumor-specific probabilities (`model_results$p`).  
 
@@ -68,7 +68,7 @@ df <- df %>%
            cfdnamaf=`cfDNA distinct mutant reads`/`cfDNA distinct reads`) %>%
     mutate(cfdnamaf=ifelse(is.nan(cfdnamaf), 0, cfdnamaf)) 
 
-df <- df %>% filter(g_include == "yes")
+df <- df %>% filter((g_include == "yes"|type=="Circulating Tumor Cell"))
 
 df %>% relocate(Gene, Patient, prob.tumor.specific, bayes.factor, cfdnamaf, wbcmaf) %>% head()
 ```
@@ -85,21 +85,21 @@ df %>% select(cfdnamaf, wbcmaf, prob.tumor.specific, type) %>%
 ```
 
 Finally, we can visualize the results of this approach
-```{r visualization, fig.align="center", fig.width=9, fig.height=9, warning=FALSE}
+```{r visualization of CTC model, fig.align="center", fig.width=9, fig.height=6, warning=FALSE}
 cluster.annotate <- df %>% select(wbc.var.type, cfdnamaf, wbcmaf) %>% group_by(wbc.var.type) %>% summarize(wbclevel=mean(wbcmaf)) %>% arrange(desc(wbclevel)) %>% filter(!is.na(wbc.var.type))
 
-df <- df %>% mutate(status = wbc.var.type) %>% mutate(status = ifelse(is.na(status), "Likely tumor-specific", wbc.var.type)) %>% mutate(status = ifelse(status==cluster.annotate$wbc.var.type[1], "Germline variants", status)) %>% mutate(status = ifelse(status==cluster.annotate$wbc.var.type[2], "Hematopoietic variants", status)) %>% mutate(prob=status) %>% mutate(prob=ifelse(status=="Likely tumor-specific", prob.tumor.specific, prob)) %>% mutate(prob=ifelse(status=="Germline variants", 2, prob), prob=ifelse(status=="Hematopoietic variants", 0, prob)) %>% mutate(prob=as.numeric(prob))
+df <- df %>% mutate(status = wbc.var.type) %>% mutate(status = ifelse((is.na(status)|(type=="Circulating Tumor Cell")), "Likely tumor-specific", wbc.var.type)) %>% mutate(status = ifelse(status==cluster.annotate$wbc.var.type[1], "Germline variants", status)) %>% mutate(status = ifelse(status==cluster.annotate$wbc.var.type[2], "Hematopoietic variants", status)) %>% mutate(prob=status) %>% mutate(prob=ifelse(status=="Likely tumor-specific", prob.tumor.specific, prob)) %>% mutate(prob=ifelse(status=="Germline variants", -2, prob), prob=ifelse(status=="Hematopoietic variants", -1, prob)) %>% mutate(prob=as.numeric(prob))
 
-df <- df %>% mutate(shapestatus=ifelse(type=="Tumor-confirmed", "Tumor confirmed", "Tumor not sequenced"))
+df <- df %>% mutate(shapestatus=ifelse(type=="Tumor-confirmed", "Tumor confirmed\nby sequencing", "Tumor not sequenced"))
 
 cfvar_plot <- ggplot(df, aes(x=wbcmaf, y=cfdnamaf)) +
     geom_jitter(aes(color = prob, fill = status, shape=shapestatus),
                 fill = "black", stat = "identity", lwd = 3, width = 0.1, alpha = 0.7) +
-    scale_color_gradientn(colors = c("red3", "orange", "blue", "black", "black", "orange"),
+    scale_color_gradientn(colors = c("red3", "darkgreen", "darkgreen", "blue", "purple"),
                           na.value = "transparent",
-                          breaks=c(0.6, 0.8, 1, 2, 0),
-                          labels=c(0.6, 0.8, 1,"Germline variants", "Hematopoietic variants"),
-                          limits=c(0 , 3)) +
+                          breaks = c(-2, -1, 0, 0.8, 1),
+                          labels=c("Germline variants", "Hematopoietic variants",0,  0.8, 1),
+                          limits=c(-2, 1)) +
     scale_x_continuous(labels = scales::percent_format(accuracy = 0.1),
                        breaks=c(0.000084, 0.001, 0.01,  0.1, 0.5),
                        trans='log10',
@@ -119,15 +119,18 @@ cfvar_plot <- ggplot(df, aes(x=wbcmaf, y=cfdnamaf)) +
       panel.border = element_blank(),
       plot.tag = element_text()) +
     theme(axis.line = element_line(color = 'black')) +
-    theme(axis.text.x = element_text(vjust=1.2, hjust= 0.3)) +
-    theme(legend.direction = "vertical", legend.box = "horizontal",
+    theme(axis.text.x = element_text(vjust=1.2, hjust= 0.3)) 
+
+cfvar_plot <- cfvar_plot +
+    theme(#legend.direction = "vertical", legend.box = "horizontal",
           legend.background = element_rect(fill = "transparent"),
-          legend.position = c(0.47, 0.88),
+          legend.position="right", legend.direction="vertical",
+          #legend.position = c(0.47, 0.88),
           legend.key = element_rect(size = 5), #legend.box.background = element_rect(colour = "black"),
           legend.key.size = unit(0.4, "cm")) +
-    guides(color=guide_legend(title="Probability\nTumor-Specific", nrow = 3),
+    guides(color=guide_legend(title="Probability\nTumor-Specific", nrow = 6),
            fill = guide_legend(title=""),
-           shape = guide_legend(title="")) +
+           shape = guide_legend(title=""), nrow=2) +
     geom_vline(xintercept=c(0.00015), linetype="dashed", size = 0.2) +
     geom_vline(xintercept=c(0.00009), linetype="dashed", size = 0.2, color = NA) +
     geom_vline(xintercept=c(0.25), linetype="dashed", size = 0.2) +
@@ -135,6 +138,7 @@ cfvar_plot <- ggplot(df, aes(x=wbcmaf, y=cfdnamaf)) +
 
 cfvar_plot + theme(axis.title=element_text(size=16), axis.text=element_text(size=13), legend.text=element_text(size=12), legend.title=element_text(size=14))
 ```
+
 There are a number of mutations with a probability of being tumor specific below 0.9. We can notice that although the white blood cell MAF is zero for these mutations, the number of cell-free DNA mutant reads is very low relative to the total reads. This naturally, introduces some doubt into our minds as to whether the mutant reads are tumor specific, or arising from a different process / tissue. This uncertainty is quantified in our method with reduced probability estimates, something a binary "tumor or not" approach does not capture.
 ```{r lower probability tumor specific mutations}
 df %>% filter(wbcmaf == 0) %>% arrange(prob) %>% select(prob, `cfDNA distinct mutant reads`, `cfDNA distinct reads`, `wbc distinct mutant reads`, `wbc distinct reads`, type, Gene, Patient) %>% slice(1:10)
@@ -169,3 +173,92 @@ fig <- plt.df %>% ggplot(aes(y=factor(Gene, levels=ordered.levels), x=factor(Pat
 
 fig
 ```
+
+
+```{r sensitivity analyses, eval=FALSE, echo=FALSE, fig.width=7.84, fig.height=8.49, warning=FALSE}
+
+df <- read_csv(fpath, show_col_types=FALSE) %>% type.convert(as.is=TRUE)
+
+data <- df %>% select(8:11) %>% magrittr::set_colnames(c("np", "yp", "nw", "yw")) %>% mutate(yw=ifelse(is.na(yw), 0, yw), nw = ifelse(is.na(nw), 1e8, nw)) %>% as.list()
+
+
+df <- df %>%
+    mutate(wbcmaf=`wbc distinct mutant reads`/`wbc distinct reads`,
+           cfdnamaf=`cfDNA distinct mutant reads`/`cfDNA distinct reads`) %>%
+    mutate(cfdnamaf=ifelse(is.nan(cfdnamaf), 0, cfdnamaf)) 
+
+rhonormal <- compute_p_tumor(data, rho = 0.001)
+rhohigh <- compute_p_tumor(data, rho = 0.01)
+rhozero <- compute_p_tumor(data, rho = 0)
+rholow <- compute_p_tumor(data, rho = 1e-8)
+flat <- compute_p_tumor(data, a_w_somatic = 1, b_w_somatic = 1, a_p_somatic = 1, b_p_somatic = 1, a_theta = 1, b_theta = 1)
+
+get_cor_bf <- function(x,y){
+  corr <- data.frame(a=log(x$bf), b=log(y$bf)) %>% as_tibble() %>% filter(is.finite(a), is.finite(b)) %>% cor() %>% as_tibble() %>% round(3) %>% slice(1) %>% pull(b)
+  
+  paste0("Corr: ", corr)
+}
+
+get_cor_p <- function(x, y){
+  corr <- cor(x$p, y$p, use='pairwise.complete.obs') %>% round(., 3)
+  
+  paste0("Corr: ", corr)
+}
+
+#CTC 1:1000 to 1:100
+a <- df %>% mutate(p=rhonormal$p, bf=rhonormal$bf, p2=rhohigh$p, bf2=rhohigh$bf) %>% filter(g_include=="yes") %>% ggplot(aes(x=log(bf), y=log(bf2))) + ylab("log(Bayes factors)\ngiven 1 CTC: 100 WBC") + xlab("log(Bayes factors)\ngiven 1 CTC: 1000 WBC") + geom_point(size = 1.5, alpha = 0.8, color="black") + geom_abline(slope = 1, intercept = 0, linetype="dashed", color="grey70") + theme_minimal() + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), panel.border = element_rect(color="black", fill=NA, size=0.5)) + geom_text(data.frame(x=520, y=-440, label=get_cor_bf(rhonormal, rhohigh)), mapping=aes(x=x, y=y, label=label), color="black", size=4, hjust='right', vjust='bottom')
+
+
+b <- df %>% mutate(p=rhonormal$p, bf=rhonormal$bf, p2=rhohigh$p, bf2=rhohigh$bf) %>% filter(g_include=="yes") %>% ggplot(aes(x=p, y=p2)) + ylab("P(tumor)\ngiven 1 CTC: 100 WBC") + xlab("P(tumor) given 1 CTC: 1000 WBC") + geom_point(size = 1.5, alpha = 0.8, color="black") + geom_abline(slope = 1, intercept = 0, linetype="dashed", color="grey70") + theme_minimal() + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), panel.border = element_rect(color="black", fill=NA, size=0.5)) + geom_text(data.frame(x=1, y=0, label=get_cor_p(rhonormal, rhohigh)), mapping=aes(x=x, y=y, label=label), color="black", size=4, vjust='bottom', hjust='right')
+
+
+#CTC 0 to 1e-8
+c <- df %>% mutate(p=rhozero$p, bf=rhozero$bf, p2=rholow$p, bf2=rholow$bf) %>% filter(g_include=="yes") %>% ggplot(aes(x=log(bf), y=log(bf2))) + ylab("log(Bayes factors)\ngiven 0 CTCs") + xlab("log(Bayes factors)\ngiven 1 CTC: 1e8 WBC") + geom_point(size = 1.5, alpha = 0.8, color="black") + geom_abline(slope = 1, intercept = 0, linetype="dashed", color="grey70") + theme_minimal() + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), panel.border = element_rect(color="black", fill=NA, size=0.5)) + geom_text(data.frame(x=600, y=0, label=get_cor_bf(rhozero, flat)), mapping=aes(x=x, y=y, label=label), color="black", size=4, hjust='right', vjust='bottom')
+
+
+d <- df %>% mutate(p=rhozero$p, bf=rhozero$bf, p2=rholow$p, bf2=rholow$bf) %>% filter(g_include=="yes") %>% ggplot(aes(x=p, y=p2)) + ylab("P(tumor)\ngiven 0 CTCs") + xlab("P(tumor) given 1 CTC: 1e8 WBC") + geom_point(size = 1.5, alpha = 0.8, color="black") + geom_abline(slope = 1, intercept = 0, linetype="dashed", color="grey70") + theme_minimal() + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), panel.border = element_rect(color="black", fill=NA, size=0.5)) +  geom_text(data.frame(x=1, y=0, label=get_cor_p(rhozero, rholow)), mapping=aes(x=x, y=y, label=label), color="black", size=4, vjust='bottom', hjust='right')
+
+
+#Beta (1,10) to (1,1)
+e <- df %>% mutate(p=rhozero$p, bf=rhozero$bf, p2=flat$p, bf2=flat$bf) %>% filter(g_include=="yes") %>% ggplot(aes(x=log(bf), y=log(bf2))) + ylab("log(Bayes factors)\ngiven beta(1,10) priors") + xlab("log(Bayes factors)\ngiven beta(1,1) priors") + geom_point(size = 1.5, alpha = 0.8, color="black") + geom_abline(slope = 1, intercept = 0, linetype="dashed", color="grey70") + theme_minimal() + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), panel.border = element_rect(color="black", fill=NA, size=0.5)) + geom_text(data.frame(x=600, y=0, label=get_cor_bf(rhozero, flat)), mapping=aes(x=x, y=y, label=label), color="black", size=4, hjust='right', vjust='bottom')
+
+
+f <- df %>% mutate(p=rhozero$p, bf=rhozero$bf, p2=flat$p, bf2=flat$bf) %>% filter(g_include=="yes") %>% ggplot(aes(x=p, y=p2)) + ylab("P(tumor)\ngiven beta(1,10) priors") + xlab("P(tumor) given beta(1,1) priors") + geom_point(size = 1.5, alpha = 0.8, color="black") + geom_abline(slope = 1, intercept = 0, linetype="dashed", color="grey70") + theme_minimal() + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), panel.border = element_rect(color="black", fill=NA, size=0.5)) + geom_text(data.frame(x=1, y=0, label=get_cor_p(rhozero, flat)), mapping=aes(x=x, y=y, label=label), color="black", size=4, vjust='bottom', hjust='right')
+
+
+#make into figure with cowplot::plot_grid
+
+cowplot::plot_grid(a,b,c,d,e,f, nrow=3, labels="AUTO")
+
+```
+
+```{r, eval=FALSE, echo=FALSE}
+#circulating tumor cell APC mutation sensitivity analysis
+yp <- 2
+np <- 9
+yw <- 9
+nw <- 1588
+
+data$yw <- yw
+data$nw <- nw
+
+table.results <- data.frame()
+
+for (y in c(1/10, 1/100, 1/1000)){
+  for (x in c(1, 10, 100)){
+    
+    data$yp <- yp*x
+    data$np <- np*x
+    
+    p <- compute_p_tumor(data, rho_ctc_parameter=y)$p
+    
+    res <- data.frame(yp=data$yp, np=data$np, rho=y, prob.tumor=p)
+    
+    table.results <- rbind(table.results, res)
+  }
+}
+
+table.results %>% mutate(prob.tumor = round(prob.tumor, 3)) %>% pivot_wider(names_from=rho, values_from=prob.tumor) %>% knitr::kable()
+```
+
+
