@@ -1,0 +1,372 @@
+---
+title: "Walkthrough of plasmut package use for matched white blood cell and cell-free DNA mutants sequenced"
+author: "Adith S. Arun and Robert B. Scharpf"
+date: "`r format(Sys.Date())`"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{plasmut}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+An example workflow of the plasmut package is shown using data from the CAIRO5 study (van't Erve and Medina et. al 2022). For a group of patients with cancer, both cell-free DNA and white blood cell DNA were sequenced. The distinct and total reads for each mutation present in cell-free DNA are displayed in the data. Corresponding white blood cell total and distinct reads are displayed as well.
+
+From this information, we wish to assign labels to each of the mutations. Specifically, for mutations seen in cell-free DNA and not in white blood cells (distinct reads wbc = 0), we estimate the probability that the mutation arises from the tumor. This is done in a Bayesian framework and approximates integrals as Monte Carlo sums. Please see the paper for a workthrough of the math underlying this. Additionally, for mutations seen in white blood cells and cell-free DNA, we classify them as either hematopoietic or germline variants in an unsupervised manner.
+
+```{r setup, message=FALSE}
+library(magrittr)
+library(plasmut)
+library(tidyverse)
+library(rjags)
+library(ggmcmc)
+```
+
+Read in the data and convert columns to their natural types.
+```{r load data}
+extdir <- system.file("extdata", package="plasmut")
+fpath <- file.path(extdir, "cairo5-matched-sequencing.csv")
+df <- read_csv(fpath, show_col_types=FALSE) %>%
+    type.convert(as.is=TRUE)
+```
+
+Here is what a sample of the relevant data from the dataframe looks like:
+```{r sample columns of data frame to show for paper}
+df %>% select(Gene, Patient,
+              `cfDNA distinct mutant reads`,
+              `cfDNA distinct reads`,
+              `wbc distinct reads`,
+              `wbc distinct mutant reads`) %>%
+    slice(1:4)
+```
+
+Select the relevant columns with total and mutant reads in cfDNA and white blood cell fractions for each mutation. (nw = total WBC reads, np = total cfDNA reads, pw = mutant WBC reads, pw = mutant cfDNA reads)
+
+```{r get relevant data}
+data <- df %>%
+    select(8:11) %>%
+    set_colnames(c("np", "yp", "nw", "yw")) %>%
+    mutate(yw=ifelse(is.na(yw), 0, yw),
+           nw = ifelse(is.na(nw), 1e8, nw)) %>%
+    as.list()
+```
+
+Call the plasmut function `compute_p_tumor()` that computes the probability of a mutation being tumor derived.
+
+We can adjust the `rho_ctc_parameter` in the `compute_p_tumor()` function to reflect our apriori assumptions about the fraction of cells in the buffy coat layer that are circulating tumor cells (CTCs). By default, it is assumed that `rho_ctc_parameter = 0`, but this can be changed. A value of 1e-3 may be a good place to start (1 CTC: 1000 WBCs) if CTCs are suspected to be present in the white blood cell fraction.
+
+```{r set_params}
+params <- list(rho_ctc_parameter=0,
+               a_w_somatic=1,
+               b_w_somatic=10,
+               a_p_somatic=1,
+               b_p_somatic=10,
+               a_theta=1,
+               b_theta=10,
+               prior.odds=1,
+               chains=2,
+               adapt=2000,
+               iter=1e5,
+               nthin=10)
+get_models <- function(params){
+    if (params$rho_ctc_parameter == 0){
+        somatic_model <- system.file(file.path("JAGS",
+                                               "somtic-model-no-tail.jag"),
+                                     package = "plasmut",
+                                     mustWork = TRUE)
+    } else{
+        somatic_model <- system.file(file.path("JAGS", "somatic-model.jag"),
+                                     package = "plasmut",
+                                     mustWork = TRUE)
+    }
+    hemato_model <- system.file(file.path("JAGS", "hemato-model.jag"),
+                                package="plasmut", mustWork = TRUE)
+    list(somatic=somatic_model,
+         hemato=hemato_model)
+}
+
+jags_list <- function(data, params){
+    data$N <- length(data$np)
+    data$a_p <- params$a_p_somatic
+    data$b_p <- params$b_p_somatic
+    data$a_theta <- params$a_theta
+    data$b_theta <- params$b_theta
+    data$a_w <- params$a_w_somatic
+    data$b_w <- params$b_w_somatic
+    data$rho <- params$rho_ctc_parameter
+    data
+}
+models <- get_models(params)
+data2 <- jags_list(data, params)
+stop("data2")
+
+fit.s <- jags.model(models$somatic,
+                    data=data2,
+                    n.chains=params$chains,
+                    n.adapt=params$adapt)
+samples.s <- coda.samples(fit.s,
+                          variable.names="out",
+                          n.iter=params$iter,
+                          thin=params$nthin)
+##
+## Importance sampling
+## theta.p ~ beta(1, 1)
+## theta.w ~ beta(1, 1)
+## importance sampler (IS): g=gamma * dbeta(1, 1) + (1-gamma)*posterior
+## - importance sampling density has same shape as posterior but with fatter tails
+y.p <- data2$yp[1]
+n.p <- data2$np[1]
+y.w <- data2$yw[1]
+n.w <- data2$nw[1]
+S <- 50e3
+gamma <- 0.2 ## weight given to uniform prior
+eta <- 0.001 ## weight given to CTC observation
+## independently sample
+##
+## Marginal likelihood under somatic model
+##
+x.p <- rbinom(S, 1, gamma)
+x.w <- rbinom(S, 1, eta)
+z <- rbeta(S, 1, 10)
+theta.p <- theta.w <- rep(NA, S)
+theta.p[x.p == 1] <- runif(sum(x.p), 0, 1)
+## prior for theta.w is mixture of point mass at zero and beta(1,10)
+theta.w <- z*x.w
+##theta.w <- rep(0, S)
+theta.p[x.p == 0] <- rbeta(sum(x.p==0), y.p+1, n.p-y.p+1)
+## not a CTC observation. Then theta should be 0 under somatic model
+##theta.w[x.w == 0] <- rep(0, sum(x.w==0))
+loglik.p <- dbinom(y.p, n.p, theta.p, log=TRUE)
+loglik.w <- dbinom(y.w, n.w, theta.w, log=TRUE)
+logprior.p <- dbeta(theta.p, 1, 1, log=TRUE)
+logprior.w <- dbeta(theta.w, 1, 10, log=TRUE) ## is this my prior
+logg.p <- log(gamma + dbeta(theta.p, y.p + 1, n.p-y.p + 1))
+##
+logg.w <- log(dbeta(theta.w, 1, 10))
+log.integrand <- loglik.p + loglik.w + logprior.p +
+    logprior.w - (logg.p - logg.w)
+integrand <- exp(log.integrand)
+marg.lik <- mean(integrand)
+## check that simulated theta is fatter than posterior
+tmp <- tibble(importance=theta.p,
+              posterior=rbeta(S, y.p+1, n.p-y.p+1)) %>%
+    pivot_longer(cols=c("importance", "posterior"),
+                 names_to="density",
+                 values_to="deviates")
+tmp %>%
+    ggplot(aes(deviates)) +
+    geom_density(aes(color=density)) +
+    theme_bw(base_size=16) +
+    coord_cartesian(xlim=c(0, 0.05))
+
+##
+## Marginal likelihood under WBC model
+##  -- again use mixture of unif and posterior for importance density
+x <- rbinom(S, 1, gamma)
+theta <- rep(NA, S)
+theta[x == 1] <- runif(sum(x), 0, 1)
+y <- y.p + y.w
+n <- n.p + n.w
+theta[x == 0] <- rbeta(sum(x==0), y + 1, n - y + 1)
+loglik.p <- dbinom(y.p, n.p, theta, log=TRUE)
+loglik.w <- dbinom(y.w, n.w, theta, log=TRUE)
+logprior <- dbeta(theta, 1, 1, log=TRUE)
+logg <- log(gamma + dbeta(theta, y + 1, n-y + 1))
+log.integrand <- loglik.p + loglik.w + logprior - logg
+integrand <- exp(log.integrand)
+marg.lik.w <- mean(integrand)
+bf <- marg.lik/marg.lik.w
+```
+
+What would be the appropriate importance sampler for $\theta_w$ under model $M_s$? Generally, the importance sampler should have a density that has a similar shape as the posterior but fatter tails.  What is strange in this scenario is that our prior for $\theta_w$ is very peaked, and in the extreme case is a point mass at zero (assuming no CTCs and no sequencing error).  Allowing for CTCs and/or sequencing error, we will still have a prior that is very peaked.
+
+```{r importance_sample_mw}
+y.w <- 10
+n.w <- 1000
+S <- 50e3
+ctc.prob <- 0.001
+eta <- rbinom(S, 1, 0.001)
+theta.w <- eta * rbeta(S, 1, 50)
+dat <- tibble(theta.w=theta.w)
+## very peaked prior
+dat %>%
+    ggplot(aes(theta.w)) +
+    geom_density() +
+    theme_bw(base_size=16)
+## typically posterior would be more peaked, but in the case of
+## y.w = 10, n.w=1000, the posterior would be more diffuse than the prior
+##
+## example:
+## prior
+theta.w <- rbeta(S, 1, 500)
+post.theta <- rbeta(S, 10 + 1, 1000-10 + 500)
+tmp <- tibble(probability=c(theta.w, post.theta),
+              density=rep(c("prior", "posterior"), each=S))
+tmp %>%
+    ggplot(aes(probability)) +
+    geom_density(aes(color=density)) +
+    theme_bw(base_size=16)
+## In the spirit of importance sampling, we would sample from
+## a distribution that would be slightly more diffuse than the posterior
+##
+## Question:  what is the sensitivity of the marginal likelihood to
+## the choice of g
+## Weight of prior
+prior.weight <- 0.7
+gamma <- rbinom(S, 1, prior.weight)
+g <- gamma * dbeta(y.w, 1, 500) + (1-gamma)*dbeta(y.w, y.w + 1, n.w - n.w + 500 )
+
+```
+
+```{r check}
+## brute force (answer=0.0909)
+S <- 50e3
+theta <- runif(S, 0, 1)
+loglik <- dbinom(2, 10, theta, log=TRUE)
+loglik.prior <- loglik+dunif(theta, 0, 1, log=TRUE)
+ml <- mean(exp(loglik.prior)) ## 0.0908
+ml
+##
+## importance sampling with mixture of unif(0,1 ) and posterior as importance sampling estimator.  Let gamma denote mixture weight
+S <- 50e3
+gamma <- 0.3
+z <- rbinom(S, 1, gamma)
+theta <- rep(NA, S)
+theta[z==1] <- rbeta(sum(z), 1, 1)
+theta[z==0] <- rbeta(sum(z==0), 3, 9)
+log.prior <- dunif(theta, 0, 1, log=TRUE)
+loglik <- dbinom(2, 10, theta, log=TRUE)
+d.is <- log(0.3 + 0.7*dbeta(theta, 3, 9))
+result <- loglik + log.prior - d.is
+est <- mean(exp(result))
+est ## 0.0905
+```
+
+
+```{r compute_prob_tumor, warning=FALSE}
+model_results <- compute_p_tumor(data)
+```
+The object model_results contains two items, the bayes factors (`model_results$bf`) and the estimated tumor-specific probabilities (`model_results$p`).
+
+
+Call the plasmut function `stratify_wbc_vars` that identifies which white blood cell mutants are germline versus hematopoietic.
+
+```{r stratify wbc variants}
+cols <- c("cfDNA distinct mutant reads",
+          "cfDNA distinct reads",
+          "wbc distinct mutant reads",
+          "wbc distinct reads")
+
+wbc.var.type <- stratify_wbc_vars(data=df,
+                                  cols=cols)
+```
+
+Compute mutant allele fractions (MAFs) for WBC and cell-free fractions. Also, clean data.
+
+```{r data cleaning and organization}
+df <- df %>%
+    mutate(prob.tumor.specific=model_results$p, bayes.factor=model_results$bf,
+           wbc.var.type=wbc.var.type) %>%
+    mutate(wbcmaf=`wbc distinct mutant reads`/`wbc distinct reads`,
+           cfdnamaf=`cfDNA distinct mutant reads`/`cfDNA distinct reads`) %>%
+    mutate(cfdnamaf=ifelse(is.nan(cfdnamaf), 0, cfdnamaf))
+
+df <- df %>% filter(g_include == "yes")
+
+df %>% relocate(Gene, Patient, prob.tumor.specific, bayes.factor, cfdnamaf, wbcmaf) %>% head()
+```
+
+We can assess the accuracy of our estimation procedure by sequencing the tumor and observing whether the mutation is found there. We sequenced 42 cases where the tumor displayed the same variant as the cell-free DNA. Our estimation procedure assigned a probability of tumor of 1 to 41 of these cases and a probability of 0.998 to the other, which was consistent with the tumor sequencing results.
+
+```{r estimation accuracy}
+df %>% select(cfdnamaf, wbcmaf, prob.tumor.specific, type) %>%
+    filter(type=="Tumor-confirmed") %>%
+    ## @ again, this is an odds and not a probability
+    mutate(prob.tumor.specific = round(prob.tumor.specific, 3)) %>%
+    group_by(prob.tumor.specific) %>%
+    summarize(category=unique(type), n=n())
+```
+
+Finally, we can visualize the results of this approach
+```{r visualization, fig.align="center", fig.width=9, fig.height=9, warning=FALSE}
+cluster.annotate <- df %>% select(wbc.var.type, cfdnamaf, wbcmaf) %>% group_by(wbc.var.type) %>% summarize(wbclevel=mean(wbcmaf)) %>% arrange(desc(wbclevel)) %>% filter(!is.na(wbc.var.type))
+
+df <- df %>% mutate(status = wbc.var.type) %>% mutate(status = ifelse(is.na(status), "Likely tumor-specific", wbc.var.type)) %>% mutate(status = ifelse(status==cluster.annotate$wbc.var.type[1], "Germline variants", status)) %>% mutate(status = ifelse(status==cluster.annotate$wbc.var.type[2], "Hematopoietic variants", status)) %>% mutate(prob=status) %>% mutate(prob=ifelse(status=="Likely tumor-specific", prob.tumor.specific, prob)) %>% mutate(prob=ifelse(status=="Germline variants", 2, prob), prob=ifelse(status=="Hematopoietic variants", 0, prob)) %>% mutate(prob=as.numeric(prob))
+
+df <- df %>% mutate(shapestatus=ifelse(type=="Tumor-confirmed", "Tumor confirmed", "Tumor not sequenced"))
+
+cfvar_plot <- ggplot(df, aes(x=wbcmaf, y=cfdnamaf)) +
+    geom_jitter(aes(color = prob, fill = status, shape=shapestatus),
+                fill = "black", stat = "identity", lwd = 3, width = 0.1, alpha = 0.7) +
+    scale_color_gradientn(colors = c("red3", "orange", "blue", "black", "black", "orange"),
+                          na.value = "transparent",
+                          breaks=c(0.6, 0.8, 1, 2, 0),
+                          labels=c(0.6, 0.8, 1,"Germline variants", "Hematopoietic variants"),
+                          limits=c(0 , 3)) +
+    scale_x_continuous(labels = scales::percent_format(accuracy = 0.1),
+                       breaks=c(0.000084, 0.001, 0.01,  0.1, 0.5),
+                       trans='log10',
+                       oob = scales::squish_infinite) +
+    scale_y_continuous(labels = scales::percent_format(accuracy = 0.1),
+                       breaks=c(0.000084, 0.001, 0.01,  0.1, 1),
+                       trans='log10',
+                       oob = scales::squish_infinite) +
+    scale_shape_manual(values = c(17, 16)) +
+    labs(x="White blood cell MAF (%)",
+          y="cfDNA MAF (%)")+
+    theme_bw() +
+    theme(
+      plot.background = element_blank(),
+      panel.grid.major = element_blank(),
+      panel.grid.minor = element_blank(),
+      panel.border = element_blank(),
+      plot.tag = element_text()) +
+    theme(axis.line = element_line(color = 'black')) +
+    theme(axis.text.x = element_text(vjust=1.2, hjust= 0.3)) +
+    theme(legend.direction = "vertical", legend.box = "horizontal",
+          legend.background = element_rect(fill = "transparent"),
+          legend.position = c(0.47, 0.88),
+          legend.key = element_rect(size = 5), #legend.box.background = element_rect(colour = "black"),
+          legend.key.size = unit(0.4, "cm")) +
+    guides(color=guide_legend(title="Probability\nTumor-Specific", nrow = 3),
+           fill = guide_legend(title=""),
+           shape = guide_legend(title="")) +
+    geom_vline(xintercept=c(0.00015), linetype="dashed", size = 0.2) +
+    geom_vline(xintercept=c(0.00009), linetype="dashed", size = 0.2, color = NA) +
+    geom_vline(xintercept=c(0.25), linetype="dashed", size = 0.2) +
+    geom_abline(slope=1, intercept=0, color="gray", alpha = 0.4, size = 0.4)
+
+cfvar_plot + theme(axis.title=element_text(size=16), axis.text=element_text(size=13), legend.text=element_text(size=12), legend.title=element_text(size=14))
+```
+There are a number of mutations with a probability of being tumor specific below 0.9. We can notice that although the white blood cell MAF is zero for these mutations, the number of cell-free DNA mutant reads is very low relative to the total reads. This naturally, introduces some doubt into our minds as to whether the mutant reads are tumor specific, or arising from a different process / tissue. This uncertainty is quantified in our method with reduced probability estimates, something a binary "tumor or not" approach does not capture.
+```{r lower probability tumor specific mutations}
+df %>% filter(wbcmaf == 0) %>% arrange(prob) %>% select(prob, `cfDNA distinct mutant reads`, `cfDNA distinct reads`, `wbc distinct mutant reads`, `wbc distinct reads`, type, Gene, Patient) %>% slice(1:10)
+```
+
+We expect there to be a near linear relationship between the bayes factors and probabilities for a given mutation, which we can observe by plotting these two quantities.
+```{r bayes factor relationship to cfDNA, fig.align="center", fig.width=5, fig.height=5, warning=FALSE, message=FALSE, echo=FALSE, results='hide'}
+cor.val <- df %>% select(prob.tumor.specific, bayes.factor, cfdnamaf, wbcmaf, Gene, Patient) %>% mutate(logbf=log(bayes.factor)) %>% filter(!is.infinite(logbf)) %>% select(cfdnamaf, logbf) %>% cor(method="spearman") %>% as_tibble() %>% slice(1) %>% pull(logbf) %>% round(2)
+
+corr <- paste0("Corr: ", cor.val)
+
+plt <- df %>% select(prob.tumor.specific, bayes.factor, cfdnamaf, wbcmaf, Gene, Patient) %>% mutate(logbf=log(bayes.factor)) %>% filter(!is.infinite(logbf)) %>% ggplot(aes(x=logbf, y=cfdnamaf)) + geom_point(size=1.5) + theme_bw() + ylab("cfDNA MAF") + xlab("log(Bayes Factor)") + theme(panel.grid.major=element_blank(), panel.grid.minor=element_blank()) + geom_smooth(method="loess", se = F)
+
+#+ geom_text(x=400, y=0.22, label=corr, size=4)
+
+plt
+```
+
+Another way to represent the probability of tumor specific estimates for each mutation is to create a gene by patient matrix and label tiles according to their status. We color a tile based on whether the underlying mutation is actually hematopoietic, germline, or somatic and outline the tile based on whether the bayes factor is above a certain level. Here, we choose the bayes factor level of 18.01 such that any value greater than this number represents a probability of tumor specific estimate of 0.9.
+
+The accuracy of our method can be assessed by noting the concordance between tile outlines and colors. For example, bayes factor > 18.01 outlined tiles almost always have a color corresponding to tumor and bayes factor < 18.01 tiles almost always have a germline or hematopoietic color.
+```{r tile plot, fig.height=6, fig.width=10, fig.align="center"}
+plt.df <- df %>% select(status, Gene, Patient, bayes.factor) %>% mutate(border=ifelse(bayes.factor > 18.01, "> 18.01", "Else")) %>% select(-bayes.factor) %>% mutate(alt.source=ifelse(status=="Likely tumor-specific", "Tumor", status)) %>% select(-status)
+
+ordered.levels <- plt.df %>% group_by(Gene) %>% summarize(n=n()) %>% arrange(desc(n)) %>% pull(Gene)
+
+gene.numbers <- plt.df %>% select(Gene) %>% distinct() %>% mutate(gene.num=1:n())
+
+plt.df <- plt.df %>% left_join(gene.numbers, by=c("Gene"="Gene"))
+
+fig <- plt.df %>% ggplot(aes(y=factor(Gene, levels=ordered.levels), x=factor(Patient), fill=alt.source, color=border)) + geom_tile(size=1.25, alpha=0.7, width=0.85, height=0.75) + theme_minimal() + ylab("Gene") + xlab("Patient") + theme(panel.grid.major=element_blank()) + theme(axis.text.x=element_blank()) + scale_color_manual(values=c("firebrick", "darkblue"), name="Bayes Factor") + scale_fill_manual(values=c("mediumorchid", "cornflowerblue", "sienna"), name="Alteration\nSource")
+
+fig
+```
