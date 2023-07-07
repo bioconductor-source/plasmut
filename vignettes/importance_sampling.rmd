@@ -422,6 +422,7 @@ fig.samples <- examples.is %>%
     scale_y_sqrt() +
     facet_grid(gene~dna_source, scales="free") +
     xlab(expression(log(odds(theta))))
+fig.samples
 d <- examples.is %>%
     map_dfr(ml_data) %>%
     mutate(gene=rep(genes, each=150e3))
@@ -444,6 +445,7 @@ fig.d <- d %>%
               vjust=1.2, hjust=1.2,
               size=5) +
     theme(strip.text.y=element_text(angle=0))
+fig.d
 bfs <- round(log10(bayes_factor(examples)), 3)
 
 plasma <- examples$data %>%
@@ -471,6 +473,10 @@ joint <- left_join(plasma, buffy, by=c("gene", "patient"),
 ##    ylim(c(0, 0.002)) +
 ##    theme(panel.grid=element_blank(),
 ##          strip.background=element_blank())
+```
+
+
+```{r data_bf}
 joint %>%
     mutate(gene=factor(gene)) %>%
     ggplot(aes(bayesfactor, gene)) +
@@ -486,6 +492,7 @@ joint %>%
           strip.text=element_blank())
 ```
 
+>>>>>>> 57036a9 (Add figures for medina study -- work in progress)
 ```{r composite}
 
 ```
