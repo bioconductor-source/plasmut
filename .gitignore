@@ -7,3 +7,4 @@
 inst/doc
 /vignettes/importance_sampling_cache/
 /vignettes/importance_sampling_files/
+/vignettes/marginal_lik.rmd
