@@ -267,7 +267,7 @@ stats$densities %>%
     scale_y_sqrt() +
     facet_wrap(~dna_source, scales="free_y") +
     xlab(expression(log(odds(theta)))) +
-    ylab("Pr(y | Model)") +
+    ylab(expression(p(y*"|"*theta)*p(theta)/g(theta))) +
     guides(fill=guide_legend(title="Marginal likelihoods")) +
     geom_text(data=ml, x=Inf, y=Inf, aes(label=label),
               vjust=1.2, hjust=1.2,
@@ -316,6 +316,7 @@ bfs <- mls %>%
     mutate(bf=round(ml.tumor/ml.chip, 3))
 d <- IS.list %>%
     map_dfr(ml_data)
+##plot(1, xlab=expression(p(y*"|"*theta)*p(theta)/g(theta)))
 d %>%
     ggplot(aes(lo(theta), m.y)) +
     geom_line() +
@@ -325,8 +326,8 @@ d %>%
           strip.background=element_blank()) +
     scale_y_sqrt() +
     facet_grid(ctc.prior~dna_source) +
+    ylab(expression(p(y*"|"*theta)*p(theta)/g(theta))) +
     xlab(expression(log(odds(theta)))) +
-    ylab("Pr(y | Model)") +
     guides(fill=guide_legend(title="Marginal likelihoods")) +
     geom_text(data=mls, x=Inf, y=Inf, aes(label=label),
               vjust=1.2, hjust=1.2,
@@ -390,36 +391,103 @@ undecided <- dat3[bayes_factor(dat3) > 0.1 & bayes_factor(dat3) < 10, ]
 
 # Figures
 
-For manuscript, choose an example from `tumor.derived`, `chip.derived`, and `undecided`.  For marginal likelihood, we are approximating an integral with by summing over many theta' -- think about a visualization that shows the area that we are approximating.
+For manuscript, choose an example from `tumor.derived`, `chip.derived`, and `undecided`.   Plot the sampling distributions for the posterior, prior, and g.  Plot p(y| theta) * p(theta)/g(theta) and indicate the marginal likelihood in the upper right corner (as above).
 
-```{r examplefig}
-## Choose an example where the Bayes factor is not ridiculously large
-tumor.example <- tumor.derived[37, ]
-## Rerun, saving the monte carlo samples
-results <- importance_sampler(tumor.example$data[[1]], param.list,
-                              save_montecarlo=TRUE)
-##
-## marginal likelihood integrand
-## -- the theta's have a very small range for CTCs because of our strong prior andno observed allele counts in plasma
-## - the 'importance sample' is not very heavy tailed
-x <- results$densities %>%
-    mutate(integrand=lik * prior/g,
-           theta=results$samples$g) %>%
-    select(theta, integrand, dna_source)
-x %>%
-    arrange(theta) %>%
-    ggplot(aes(theta, integrand)) +
-    geom_line() +
-    geom_area(fill="gray", stat="identity") +
+```{r fig.width=12, fig.height=10}
+examples <- bind_rows(tumor.derived[1, ],
+                      undecided[1, ],
+                      chip.derived[2, ])
+examples.is <- examples$data %>%
+    map(importance_sampler, params=param.list, save_montecarlo=TRUE)
+genes <- examples$data %>%
+    map_chr(function(x) x$gene[[1]])
+ml.list <- examples.is %>%
+    map_dfr(ml_labels) %>%
+    mutate(gene=rep(genes, each=3))
+fig.samples <- examples.is %>%
+    map_dfr(function(x) x$samples) %>%
+    mutate(gene=rep(genes, each=150e3)) %>%
+    ##filter(dna_source=="ctDNA") %>%
+    pivot_longer(!c(dna_source, model, gene),
+                 names_to="distribution",
+                 values_to="samples") %>%
+    mutate(distribution=factor(distribution, c("prior", "posterior", "g"))) %>%
+    ggplot(aes(lo(samples))) +
+    geom_density(aes(color=distribution),
+                 size=1.2) +
     theme_bw(base_size=16) +
-    theme(panel.grid=element_blank()) +
-    facet_wrap(~dna_source, scales="free")
+    theme(panel.grid=element_blank(),
+          strip.background=element_blank(),
+          strip.text.y=element_text(angle=0)) +
+    scale_y_sqrt() +
+    facet_grid(gene~dna_source, scales="free") +
+    xlab(expression(log(odds(theta))))
+d <- examples.is %>%
+    map_dfr(ml_data) %>%
+    mutate(gene=rep(genes, each=150e3))
+mls <- examples.is %>% map_dfr(ml_labels2) %>%
+    mutate(gene=rep(genes, each=3))
+##plot(1, xlab=expression(p(y*"|"*theta)*p(theta)/g(theta)))
+fig.d <- d %>%
+    ggplot(aes(lo(theta), m.y)) +
+    geom_line() +
+    geom_ribbon(aes(ymin=0, ymax=m.y), fill="gray")+
+    theme_bw(base_size=20) +
+    theme(panel.grid=element_blank(),
+          strip.background=element_blank()) +
+    scale_y_sqrt() +
+    facet_grid(gene~dna_source) +
+    ylab(expression(p(y*"|"*theta)*p(theta)/g(theta))) +
+    xlab(expression(log(odds(theta)))) +
+    guides(fill=guide_legend(title="Marginal likelihoods")) +
+    geom_text(data=mls, x=Inf, y=Inf, aes(label=label),
+              vjust=1.2, hjust=1.2,
+              size=5) +
+    theme(strip.text.y=element_text(angle=0))
+bfs <- round(log10(bayes_factor(examples)), 3)
 
-## Evaluating with a different prior
-param.list2 <- param.list
-## uniform prior
-param.list2$ctc <- list(a=1, b=9)
-results2 <- importance_sampler(tumor.example$data[[1]],
-                               param.list2,
-                               save_montecarlo=TRUE)
+plasma <- examples$data %>%
+    bind_rows() %>%
+    filter(analyte=="plasma")
+buffy <- examples$data %>%
+    bind_rows() %>%
+    filter(analyte=="buffy coat")
+joint <- left_join(plasma, buffy, by=c("gene", "patient"),
+                   suffix=c(".plasma", ".buffy")) %>%
+    unite(label.plasma, c(y.plasma, n.plasma), sep="/", remove=FALSE) %>%
+    unite(label.buffy, c(y.buffy, n.buffy), sep="/", remove=FALSE) %>%
+    unite(label, c(label.plasma, label.buffy), sep=", ", remove=FALSE) %>%
+    mutate(label=paste0(gene, " (", label, ")")) %>%
+    mutate(bayesfactor=bfs)
+##joint %>%
+##    ggplot(aes(y.plasma/n.plasma, y.buffy/n.buffy)) +
+##    geom_point() +
+##    theme_bw(base_size=16) +
+##    ##facet_wrap(~gene, ncol=1) +
+##    geom_text_repel(aes(label=label), hjust=-0.2, vjust=0.5) +
+##    xlab("Plasma (y/n)") +
+##    ylab("Buffy coat (y/n)") +
+##    xlim(c(0, 0.3)) +
+##    ylim(c(0, 0.002)) +
+##    theme(panel.grid=element_blank(),
+##          strip.background=element_blank())
+joint %>%
+    mutate(gene=factor(gene)) %>%
+    ggplot(aes(bayesfactor, gene)) +
+    geom_point() +
+    theme_bw(base_size=16) +
+    ##facet_wrap(~gene, ncol=1) +
+    geom_text_repel(aes(label=label), hjust=-0.2, vjust=0.5) +
+    ylab("") +
+    facet_wrap(~gene, ncol=1, scales="free_y") +
+    xlab(expression(log[10]("Bayes factor"))) +
+    theme(panel.grid=element_blank(),
+          strip.background=element_blank(),
+          strip.text=element_blank())
 ```
+
+```{r composite}
+
+```
+
+- For some of the apparent chip-derived MAFs, it seems that the MAFs are obviously different in buffy coat and plasma and that the chip-derived model is just the better of two models with very low probabilities.
