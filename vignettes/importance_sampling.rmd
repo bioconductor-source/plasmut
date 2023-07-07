@@ -492,9 +492,5 @@ joint %>%
           strip.text=element_blank())
 ```
 
->>>>>>> 57036a9 (Add figures for medina study -- work in progress)
-```{r composite}
-
-```
 
 - For some of the apparent chip-derived MAFs, it seems that the MAFs are obviously different in buffy coat and plasma and that the chip-derived model is just the better of two models with very low probabilities.
