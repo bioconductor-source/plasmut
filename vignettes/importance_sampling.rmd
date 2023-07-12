@@ -341,11 +341,26 @@ As the strength of the prior for the rarity of CTCs increases from top to bottom
 # Evaluation on empirical data from Medina et al.
 
 Read in the Median et al. data and wrangle to format required for the `plasmut` package.
+WBC is available only at baseline, though presumably the MAFs are available at all timepoints for cfDNA.
 
-```{r empirical_data_wrangling}
+```{r vantveer}
+clean_colnames <- function(x){
+    nms <- colnames(x) %>%
+        tolower() %>%
+        str_replace_all(" ", "_")
+    colnames(x) <- nms
+    x
+}
 extdir <- system.file("extdata", package="plasmut")
 fpath <- file.path(extdir, "cairo5-matched-sequencing.csv")
-df <- read_csv(fpath, show_col_types=FALSE) %>% type.convert(as.is=TRUE)
+df <- read_csv(fpath, show_col_types=FALSE) %>%
+    type.convert(as.is=TRUE)
+df2 <- df %>%
+    clean_colnames()
+colnames(df2)[c(9, 8)] <- c("y", "n")
+```
+
+```{r empirical_data_wrangling}
 cfdna <- df %>%
     select(Gene, Patient, `cfDNA distinct mutant reads`,
            `cfDNA distinct reads`) %>%
