@@ -362,21 +362,24 @@ colnames(df2)[c(9, 8)] <- c("y", "n")
 
 ```{r empirical_data_wrangling}
 cfdna <- df %>%
-    select(Gene, Patient, `cfDNA distinct mutant reads`,
+    select(Gene, Patient, `Nucleotide Position (hg19)`,
+           `cfDNA distinct mutant reads`,
            `cfDNA distinct reads`) %>%
-    set_colnames(c("gene", "patient", "y", "n")) %>%
+    set_colnames(c("gene", "patient",
+                   "position", "y", "n")) %>%
     mutate(analyte="plasma")
 buffy <- df %>%
-    select(Gene, Patient, `wbc distinct reads`,
+    select(Gene, Patient, `Nucleotide Position (hg19)`,
+           `wbc distinct reads`,
            `wbc distinct mutant reads`) %>%
-    set_colnames(c("gene", "patient", "n", "y")) %>%
+    set_colnames(c("gene", "patient", "position", "n", "y")) %>%
     mutate(analyte="buffy coat")
 dat <- bind_rows(cfdna, buffy) %>%
-    unite("uid", c("gene", "patient"), remove=FALSE) %>%
+    unite("uid", c("gene", "patient", "position"), remove=FALSE) %>%
     group_by(uid) %>%
     nest()
 is_valid <- function(dat){
-    !any(is.na(c(dat$y, dat$n)))
+    !any(is.na(c(dat$y, dat$n))) & all(dat$n > 0)
 }
 valid <- map_lgl(dat$data, is_valid)
 dat2 <- dat[valid, ]
@@ -390,19 +393,18 @@ bayes_factor <- function(x){
         map_dbl(fun)
     bf
 }
-is_nan <- is.nan(bayes_factor(dat2))
-dat3 <- dat2[!is_nan, ]
-## Adith, please check these
-dat.nan <- dat2[is_nan, ]
-tumor.derived <- dat3[bayes_factor(dat3) >= 10, ]
+tumor.derived <- dat2[bayes_factor(dat2) >= 10, ]
 tumor.derived$IS %>%
     do.call(bind_rows, .)
-chip.derived <- dat3[bayes_factor(dat3) <= 0.1, ]
+chip.derived <- dat2[bayes_factor(dat2) <= 0.1, ]
 chip.derived$IS %>%
     do.call(bind_rows, .)
 ## we might want to look at these more closely
-undecided <- dat3[bayes_factor(dat3) > 0.1 & bayes_factor(dat3) < 10, ]
+undecided <- dat2[bayes_factor(dat2) > 0.1 & bayes_factor(dat2) < 10, ]
 ```
+
+Appears that there was a requirement that their had to be 4 mutant reads in plasma.
+
 
 # Figures
 
@@ -509,3 +511,7 @@ joint %>%
 
 
 - For some of the apparent chip-derived MAFs, it seems that the MAFs are obviously different in buffy coat and plasma and that the chip-derived model is just the better of two models with very low probabilities.
+
+```{r jags}
+tmp <- readRDS("inst/extdata/JAGS-IS-comparison.rds")
+```
