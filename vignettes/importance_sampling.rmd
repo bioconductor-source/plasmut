@@ -362,14 +362,14 @@ colnames(df2)[c(9, 8)] <- c("y", "n")
 
 ```{r empirical_data_wrangling}
 cfdna <- df %>%
-    select(Gene, Patient, `Nucleotide Position (hg19)`,
+    select(Gene, Patient, `AAChange`,
            `cfDNA distinct mutant reads`,
            `cfDNA distinct reads`) %>%
     set_colnames(c("gene", "patient",
                    "position", "y", "n")) %>%
     mutate(analyte="plasma")
 buffy <- df %>%
-    select(Gene, Patient, `Nucleotide Position (hg19)`,
+    select(Gene, Patient, `AAChange`,
            `wbc distinct reads`,
            `wbc distinct mutant reads`) %>%
     set_colnames(c("gene", "patient", "position", "n", "y")) %>%
@@ -513,5 +513,84 @@ joint %>%
 - For some of the apparent chip-derived MAFs, it seems that the MAFs are obviously different in buffy coat and plasma and that the chip-derived model is just the better of two models with very low probabilities.
 
 ```{r jags}
-tmp <- readRDS("inst/extdata/JAGS-IS-comparison.rds")
+jags <- readRDS("inst/extdata/JAGS-IS-comparison.rds")
+## missing from importance sampler output
+tmp <- filter(dat, uid %in% jags$uid) %>%
+    filter(!uid %in% dat2$uid)
+jags.subset <- filter(jags, uid %in% dat2$uid)
+is <- dat2$IS %>%
+    do.call(bind_rows, .) %>%
+    mutate(uid=dat2$uid)
+jags.subset2 <- select(jags.subset, uid, bf_JAGS,
+                       sample_included_in_medina, type)
+compare <- is %>%
+    select(uid, bayesfactor) %>%
+    left_join(jags.subset2,
+              by="uid")
+##
+## 17 obviously tumor-derived
+##
+obviously.tumor <- filter(compare, !is.finite(bayesfactor))
+##
+## When mutation is very prevalent in plasma and present but rare in cfDNA, we would expect this to be CTC and Bayes factor should be very large
+## -- the large bayes factor
+
+
+##
+## 2 of the 17 obviously tumor were NaNs in JAGS
+##
+jags.nan <- tail(obviously.tumor, 2)
+data.nan <- filter(dat2, uid %in% jags.nan$uid)
+##
+## 31 small bayes factors by one or both methods
+##
+small.bf <- filter(compare, abs(bayesfactor) <= 10 |
+                            abs(bf_JAGS) <=10)
+small.bf %>%
+    ggplot(aes(bayesfactor, bf_JAGS)) +
+    geom_point() +
+    theme_bw(base_size=16)
+## one of 31 highly discordant
+discordant <- filter(small.bf, bf_JAGS > 1000)
+## JAGS model considers this to be tumor-derived, but that would suggest that nearly half of the cells in buffy coat to be CTCs
+filter(dat2, uid %in% discordant$uid) %>%
+    pull(data)
+##
+## For 30 of the 31, bayes factor is much higher by jags
+##
+small.bf2 <- small.bf %>%
+    filter(uid != discordant$uid)
+small.bf2 %>%
+    ggplot(aes(bayesfactor, bf_JAGS)) +
+    geom_point() +
+    theme_bw(base_size=16)
+higher.in.jags <- filter(small.bf2, bf_JAGS > 10)
+filter(dat2, uid %in% higher.in.jags$uid) %>%
+    pull(data)
+filter(dat2, uid %in% higher.in.jags$uid) %>%
+    pull(IS)
+## both models agree and JAGS interprets this as much stronger
+## evidence than the IS.  I prefer the smaller BF from IS
+remaining <- filter(small.bf2, !uid %in% higher.in.jags$uid)
+both.small <- filter(small.bf2, log10(bayesfactor) < -5,
+                     log10(bf_JAGS) < -5)
+remaining %>%
+    ggplot(aes(bayesfactor, bf_JAGS)) +
+    geom_point() +
+    scale_y_log10() +
+    scale_x_log10() +
+    geom_abline()
+remaining2 <- filter(remaining, !uid %in% both.small$uid)
+filter(dat2, uid %in% remaining2$uid) %>%
+    pull(data)
+##
+## For remaining 75 datapoints, inference is the same
+##
+compare3 <- filter(compare2, !uid %in% small.bf$uid)
+compare3 %>%
+    ggplot(aes(bayesfactor, bf_JAGS)) +
+    geom_point() +
+    scale_y_log10() +
+    scale_x_log10() +
+    geom_abline()
 ```
