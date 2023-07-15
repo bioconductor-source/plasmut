@@ -113,12 +113,12 @@ model_w <- function(dat, params){
     n <- setNames(dat$n, dat$analyte)
     a <- params$a
     b <- params$b
+    ##
+    ## With single theta and conjugate (beta) prior, posterior is
+    ## beta(a + y_w + y_p, b + (n.w + n.p)-(y.w+y.p))
+    ##
     a.n <- a + sum(y)
     b.n <- sum(n)- sum(y) + b
-    a.p <- a + y["plasma"]
-    b.p <- n["plasma"] - y["plasma"] + b
-    a.w <- a + y["buffy coat"]
-    b.w <- n["buffy coat"] - y["buffy coat"] + b
     g.samples <- rep(NA, S)
     x <- rbinom(S, 1, prior.weight)
     g.samples[x == 1] <- rbeta(sum(x), a, b)
