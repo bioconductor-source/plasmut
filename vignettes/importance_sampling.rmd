@@ -8,7 +8,9 @@ output: html_document
 ```{r setup, message=FALSE}
 library(magrittr)
 library(tidyverse)
-library(plasmut)
+library(ggrepel)
+##library(plasmut)
+devtools::load_all()
 lo <- function(p) log(p/(1-p))
 ```
 
@@ -37,7 +39,7 @@ Our importance sampler will be a mix of the prior and posterior with a default w
 
 ```{r parameters}
 ## Parameters
-param.list <- list(ctc=list(a=1, b=9999),
+param.list <- list(ctc=list(a=1, b=10e3),
                    ctdna=list(a=1, b=9),
                    chip=list(a=1, b=9),
                    montecarlo.samples=50e3,
@@ -81,13 +83,13 @@ stats  ## with all the monte carlo samples
 importance_sampler(dat$data[[1]], param.list, save_montecarlo=FALSE)
 ```
 
-With our strong prior that CTCs are rare, we view the plasma MAF of 4/1000 and buffy coat MAF of 1/1000 as very weak evidence that the mutation is tumor derived (Bayes factor `round(stats$bayesfactor$bayesfactor, 3)`).  Had we instead observed no mutations in buffy coat (scenario B), the Bayes factor increases by a factor of nearly 28 and we would conclude that there is strong evidence in support of a tumor-derived mutation.
+With our strong prior that CTCs are rare, we view the plasma MAF of 4/1000 and buffy coat MAF of 1/1000 as very weak evidence that the mutation is tumor derived (log Bayes factor `round(stats$bayesfactor$bayesfactor, 2)`).  Had we instead observed no mutations in buffy coat (scenario B below), the log Bayes factor increases by 3 and we would conclude that there is strong evidence in support of a tumor-derived mutation.
 
 ```{r scenariob}
 importance_sampler(dat$data[[2]], param.list, save_montecarlo=FALSE)
 ```
 
-Note, that the marginal likelihood of the CTC model is higher as observing no mutations in 1000 reads from buffy coat is more consistent with our prior; and the marginal likelihood of the chip model decreases by a factor of 3 as we would anticipate observing mutant reads in the buffy coat if the mutation was derived from CHIP.
+Note, that the log marginal likelihood of the CTC model is higher as observing no mutations in 1000 reads from buffy coat is more consistent with our prior; and the log marginal likelihood of the chip model decreases 1 as we would anticipate observing mutant reads in the buffy coat if the mutation was derived from CHIP.
 
 
 ### Underneath the hood
@@ -97,24 +99,24 @@ For tumor-derived mutations, the MAF observed in plasma from ctDNA is likely to 
 
 ```{r tumor_derived}
 ## Tumor-derived
-ctcs <- plasmut:::wbc_somatic(dat$data[[1]], param.list)
-ctdna <- plasmut:::plasma_somatic(dat$data[[1]], param.list)
-marglik <- ctcs$marglik * ctdna$marglik
+ctcs <- wbc_somatic(dat$data[[1]], param.list)
+ctdna <- plasma_somatic(dat$data[[1]], param.list)
+logmarglik <- log(ctcs$marglik) + log(ctdna$marglik)
 ```
 
 While cfDNA fragmentation is influenced by chromatin structure of mostly hematopoietic cells and buffy coat sequencing would not be affected by chromatin structure, we hypothesize that the proportion of germline / CHIP derived variants would still be similar in these two analytes.
 
 ```{r germline_or_chip}
-chip <- plasmut:::model_w(dat$data[[1]], param.list)
+chip <- model_w(dat$data[[1]], param.list)
 ```
 
-The Bayes factor for the tumor-derived model is given by `r round(marglik/chip$marglik, 3)`, suggesting that there is very weak evidence that the mutation is tumor-derived in Scenario A.  An investigator with data suggesting that CTCs in buffy coat are more likely would have a different prior and a larger Bayes factor supporting the tumor-derived model:
+The Bayes factor for the tumor-derived model is given by `r round(logmarglik - log(chip$marglik), 2)`, suggesting that there is very weak evidence that the mutation is tumor-derived in Scenario A.  An investigator with data suggesting that CTCs in buffy coat are more likely would have a different prior and a larger Bayes factor supporting the tumor-derived model:
 
 ```{r different_prior}
 param.list2 <- param.list
 param.list2$ctc <- list(a=1, b=499)
-ctcs2 <- plasmut:::wbc_somatic(dat$data[[1]], param.list2)
-bf2 <- round(ctcs2$marglik * ctdna$marglik / chip$marglik, 3)
+ctcs2 <- wbc_somatic(dat$data[[1]], param.list2)
+bf2 <- round(log(ctcs2$marglik) + log(ctdna$marglik) - log(chip$marglik), 2)
 round(bf2, 3)
 ```
 
@@ -167,7 +169,7 @@ combined %>%
     scale_y_log10() +
     theme_bw(base_size=16) +
     xlab("Monte Carlo samples") +
-    ylab("Standard deviation of\n Bayes Factor estimate")
+    ylab("Standard deviation of\n log Bayes Factor")
 ```
 
 Note that with importance sampling, relatively stable estimates for the Bayes factor are obtained with as few as 10,000 Monte Carlo samples while sampling from the prior distribution is very unstable for small sample sizes.
@@ -179,7 +181,7 @@ combined %>%
     ggplot(aes(prior.weight, mean_bf)) +
     geom_point() +
     theme_bw(base_size=16) +
-    ylab("Mean Bayes factor") +
+    ylab("Mean log Bayes factor") +
     xlab("Prior weight")
 ```
 
@@ -218,8 +220,8 @@ ml_labels <- function(x){
                      names_to="dna_source",
                      values_to="marginal_lik") %>%
         mutate(dna_source=c("CTC", "ctDNA", "WBC")) %>%
-        mutate(marginal_lik=round(marginal_lik, 4),
-               label=paste0("m(y)=", marginal_lik))
+        mutate(marginal_lik=round(marginal_lik, 2),
+               label=paste0("log m(y)=", marginal_lik))
     labels
 }
 ml <- ml_labels(stats)
@@ -231,17 +233,17 @@ stats$samples %>%
     mutate(distribution=factor(distribution, c("prior", "posterior", "g"))) %>%
     ggplot(aes(lo(samples))) +
     geom_density(aes(color=distribution),
-                 size=1.2) +
+                 linewidth=1.2) +
     theme_bw(base_size=16) +
     theme(panel.grid=element_blank(),
           strip.background=element_blank()) +
     scale_y_sqrt() +
     facet_wrap(~dna_source, scales="free") +
     xlab(expression(log(odds(theta))))
-ml.tumor <- round(prod(ml$marginal_lik[1:2]), 4)
-ml.chip <- round(ml$marginal_lik[3], 4)
-bf <- round(stats$bayesfactor$bayesfactor, 3)
-bf.text <- paste0(ml.tumor, "/", ml.chip, " = ", bf)
+ml.tumor <- round(sum(ml$marginal_lik[1:2]), 2)
+ml.chip <- round(ml$marginal_lik[3], 2)
+bf <- round(stats$bayesfactor$bayesfactor, 2)
+bf.text <- paste0(ml.tumor, "-", ml.chip, " = ", bf)
 ```
 
 Below, panels CTC and ctDNA indicate the likelihood of the observed MAFs as a function of $\theta$ in the buffy coat and plasma, respectively, conditional on the model that the mutations are tumor-derived (i.e., from CTCs mixed in with the buffy coat and from ctDNA in plasma).
@@ -252,7 +254,7 @@ The Bayes factor is obtained by the product of the two marginal likelihoods calc
 ```{r ml, fig.width=15, fig.height=5}
 stats$densities %>%
     left_join(ml, by="dna_source") %>%
-    mutate(m.y=lik * prior / g) %>%
+    mutate(m.y=lik*prior/g) %>%
     ## thetas were sampled from g
     mutate(theta=stats$samples$g) %>%
     group_by(dna_source) %>%
@@ -311,9 +313,9 @@ ml_labels2 <- function(x){
 mls <- IS.list %>% map_dfr(ml_labels2)
 bfs <- mls %>%
     group_by(ctc.prior) %>%
-    summarize(ml.tumor=prod(marginal_lik[dna_source%in% c("CTC", "ctDNA")]),
+    summarize(ml.tumor=sum(marginal_lik[dna_source%in% c("CTC", "ctDNA")]),
               ml.chip=marginal_lik[dna_source=="WBC"]) %>%
-    mutate(bf=round(ml.tumor/ml.chip, 3))
+    mutate(bf=round(ml.tumor-ml.chip, 2))
 d <- IS.list %>%
     map_dfr(ml_data)
 ##plot(1, xlab=expression(p(y*"|"*theta)*p(theta)/g(theta)))
@@ -393,14 +395,15 @@ bayes_factor <- function(x){
         map_dbl(fun)
     bf
 }
-tumor.derived <- dat2[bayes_factor(dat2) >= 10, ]
+tumor.derived <- dat2[bayes_factor(dat2) >= log(10), ]
 tumor.derived$IS %>%
     do.call(bind_rows, .)
-chip.derived <- dat2[bayes_factor(dat2) <= 0.1, ]
+chip.derived <- dat2[bayes_factor(dat2) <= log(0.1), ]
 chip.derived$IS %>%
     do.call(bind_rows, .)
 ## we might want to look at these more closely
-undecided <- dat2[bayes_factor(dat2) > 0.1 & bayes_factor(dat2) < 10, ]
+undecided <- dat2[bayes_factor(dat2) > log(0.1) &
+                  bayes_factor(dat2) < log(10), ]
 ```
 
 Appears that there was a requirement that their had to be 4 mutant reads in plasma.
@@ -463,7 +466,7 @@ fig.d <- d %>%
               size=5) +
     theme(strip.text.y=element_text(angle=0))
 fig.d
-bfs <- round(log10(bayes_factor(examples)), 3)
+bfs <- round(bayes_factor(examples), 2)
 
 plasma <- examples$data %>%
     bind_rows() %>%
@@ -478,18 +481,6 @@ joint <- left_join(plasma, buffy, by=c("gene", "patient"),
     unite(label, c(label.plasma, label.buffy), sep=", ", remove=FALSE) %>%
     mutate(label=paste0(gene, " (", label, ")")) %>%
     mutate(bayesfactor=bfs)
-##joint %>%
-##    ggplot(aes(y.plasma/n.plasma, y.buffy/n.buffy)) +
-##    geom_point() +
-##    theme_bw(base_size=16) +
-##    ##facet_wrap(~gene, ncol=1) +
-##    geom_text_repel(aes(label=label), hjust=-0.2, vjust=0.5) +
-##    xlab("Plasma (y/n)") +
-##    ylab("Buffy coat (y/n)") +
-##    xlim(c(0, 0.3)) +
-##    ylim(c(0, 0.002)) +
-##    theme(panel.grid=element_blank(),
-##          strip.background=element_blank())
 ```
 
 
@@ -507,90 +498,4 @@ joint %>%
     theme(panel.grid=element_blank(),
           strip.background=element_blank(),
           strip.text=element_blank())
-```
-
-
-- For some of the apparent chip-derived MAFs, it seems that the MAFs are obviously different in buffy coat and plasma and that the chip-derived model is just the better of two models with very low probabilities.
-
-```{r jags}
-jags <- readRDS("inst/extdata/JAGS-IS-comparison.rds")
-## missing from importance sampler output
-tmp <- filter(dat, uid %in% jags$uid) %>%
-    filter(!uid %in% dat2$uid)
-jags.subset <- filter(jags, uid %in% dat2$uid)
-is <- dat2$IS %>%
-    do.call(bind_rows, .) %>%
-    mutate(uid=dat2$uid)
-jags.subset2 <- select(jags.subset, uid, bf_JAGS,
-                       sample_included_in_medina, type)
-compare <- is %>%
-    select(uid, bayesfactor) %>%
-    left_join(jags.subset2,
-              by="uid")
-##
-## 17 obviously tumor-derived
-##
-obviously.tumor <- filter(compare, !is.finite(bayesfactor))
-##
-## When mutation is very prevalent in plasma and present but rare in cfDNA, we would expect this to be CTC and Bayes factor should be very large
-## -- the large bayes factor
-
-
-##
-## 2 of the 17 obviously tumor were NaNs in JAGS
-##
-jags.nan <- tail(obviously.tumor, 2)
-data.nan <- filter(dat2, uid %in% jags.nan$uid)
-##
-## 31 small bayes factors by one or both methods
-##
-small.bf <- filter(compare, abs(bayesfactor) <= 10 |
-                            abs(bf_JAGS) <=10)
-small.bf %>%
-    ggplot(aes(bayesfactor, bf_JAGS)) +
-    geom_point() +
-    theme_bw(base_size=16)
-## one of 31 highly discordant
-discordant <- filter(small.bf, bf_JAGS > 1000)
-## JAGS model considers this to be tumor-derived, but that would suggest that nearly half of the cells in buffy coat to be CTCs
-filter(dat2, uid %in% discordant$uid) %>%
-    pull(data)
-##
-## For 30 of the 31, bayes factor is much higher by jags
-##
-small.bf2 <- small.bf %>%
-    filter(uid != discordant$uid)
-small.bf2 %>%
-    ggplot(aes(bayesfactor, bf_JAGS)) +
-    geom_point() +
-    theme_bw(base_size=16)
-higher.in.jags <- filter(small.bf2, bf_JAGS > 10)
-filter(dat2, uid %in% higher.in.jags$uid) %>%
-    pull(data)
-filter(dat2, uid %in% higher.in.jags$uid) %>%
-    pull(IS)
-## both models agree and JAGS interprets this as much stronger
-## evidence than the IS.  I prefer the smaller BF from IS
-remaining <- filter(small.bf2, !uid %in% higher.in.jags$uid)
-both.small <- filter(small.bf2, log10(bayesfactor) < -5,
-                     log10(bf_JAGS) < -5)
-remaining %>%
-    ggplot(aes(bayesfactor, bf_JAGS)) +
-    geom_point() +
-    scale_y_log10() +
-    scale_x_log10() +
-    geom_abline()
-remaining2 <- filter(remaining, !uid %in% both.small$uid)
-filter(dat2, uid %in% remaining2$uid) %>%
-    pull(data)
-##
-## For remaining 75 datapoints, inference is the same
-##
-compare3 <- filter(compare2, !uid %in% small.bf$uid)
-compare3 %>%
-    ggplot(aes(bayesfactor, bf_JAGS)) +
-    geom_point() +
-    scale_y_log10() +
-    scale_x_log10() +
-    geom_abline()
 ```
