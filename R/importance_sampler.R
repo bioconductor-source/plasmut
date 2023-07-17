@@ -180,14 +180,14 @@ importance_sampler <- function(dat, params, save_montecarlo=TRUE){
     ## Probability we see the somatic alteration in
     ## cfDNA
     B <- plasma_somatic(dat, params)
-    ml.tumor <- A$marglik * B$marglik
+    ml.tumor <- log(A$marglik) + log(B$marglik)
     ##ns.params <- nonsomatic_params(1, 10, gamma=0.2)
     model.not.tumor <- model_w(dat, params)
-    ml.not.tumor <- model.not.tumor$marglik
-    bf <- ml.tumor/ml.not.tumor
-    stats <- tibble(ctc=A$marglik,
-                    ctdna=B$marglik,
-                    chip=model.not.tumor$marglik,
+    ml.not.tumor <- log(model.not.tumor$marglik)
+    bf <- ml.tumor - ml.not.tumor
+    stats <- tibble(ctc=log(A$marglik),
+                    ctdna=log(B$marglik),
+                    chip=log(model.not.tumor$marglik),
                     bayesfactor=bf)
     if(!save_montecarlo) return(stats)
     densities <- bind_rows(A$densities,
