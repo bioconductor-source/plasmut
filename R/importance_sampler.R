@@ -62,8 +62,19 @@ importance_samples <- function(y, n,
 #' `a`: prior expectation for number of somatic variants 
 #' observed in the WBC sequencing data (either by error or from a CTC)
 #' `b`: prior expectation for number of WBCs not containing the variant
-#'
-#'
+#' @examples
+#' param.list <- list(ctc=list(a=1, b=9999),
+#'                    ctdna=list(a=1, b=9),
+#'                    chip=list(a=1, b=9),
+#'                    montecarlo.samples=50e3,
+#'                    prior.weight=0.1)
+#' dat <- data.frame(y=c(4, 1),
+#'               n=c(1000, 1000),
+#'               analyte=c("plasma", "buffy coat"),
+#'               mutation="mutA",
+#'               sample_id="id1")
+#' wbc_somatic(dat, param.list)
+#' @export
 wbc_somatic <- function(dat, params){
     # asssume we observed y_w=500 and n_w = 1000
     # This is clearly germline, but to go through the machinery, 
@@ -95,6 +106,19 @@ wbc_somatic <- function(dat, params){
 #' `a`: prior expectation for number of plasma somatic variants
 #' observed in the plasma sequencing data 
 #' `b`: prior expectation for number of plasma fragments not containing variants
+#' @examples
+#' param.list <- list(ctc=list(a=1, b=9999),
+#'                    ctdna=list(a=1, b=9),
+#'                    chip=list(a=1, b=9),
+#'                    montecarlo.samples=50e3,
+#'                    prior.weight=0.1)
+#' dat <- data.frame(y=c(4, 1),
+#'               n=c(1000, 1000),
+#'               analyte=c("plasma", "buffy coat"),
+#'               mutation="mutA",
+#'               sample_id="id1")
+#' plasma_somatic(dat, param.list)
+#' @export
 plasma_somatic <- function(dat, params){
     prior.weight <- params$prior.weight
     S <- params$montecarlo.samples
@@ -124,6 +148,19 @@ plasma_somatic <- function(dat, params){
 #' observed in the sequencing data
 #' b which is the prior expectation for number of fragments 
 #' reflecting CH or germline
+#' @examples
+#' param.list <- list(ctc=list(a=1, b=9999),
+#'                    ctdna=list(a=1, b=9),
+#'                    chip=list(a=1, b=9),
+#'                    montecarlo.samples=50e3,
+#'                    prior.weight=0.1)
+#' dat <- data.frame(y=c(4, 1),
+#'               n=c(1000, 1000),
+#'               analyte=c("plasma", "buffy coat"),
+#'               mutation="mutA",
+#'               sample_id="id1")
+#' importance_sampler(dat, param.list)
+#' @export
 model_w <- function(dat, params){
     #We use g to propose values of theta and evaluate the 
     #likelihood of the observed data in plasma and WBCs given this value

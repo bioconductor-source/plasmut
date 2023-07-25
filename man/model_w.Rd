@@ -26,3 +26,16 @@ If germline, the allele frequency should be 50 percent.
 The prior should be diffuse enough to handle CHIP mutations which are
 potentially way less than 50 percent
 }
+\examples{
+param.list <- list(ctc=list(a=1, b=9999),
+                   ctdna=list(a=1, b=9),
+                   chip=list(a=1, b=9),
+                   montecarlo.samples=50e3,
+                   prior.weight=0.1)
+dat <- data.frame(y=c(4, 1),
+              n=c(1000, 1000),
+              analyte=c("plasma", "buffy coat"),
+              mutation="mutA",
+              sample_id="id1")
+importance_sampler(dat, param.list)
+}

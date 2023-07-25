@@ -2,15 +2,20 @@
 title: "Estimating the marginal likelihood from importance sampling"
 author: "Adith S. Arun and Robert B. Scharpf"
 date: "`r format(Sys.Date())`"
-output: html_document
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{plasmut}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
 ---
 
 ```{r setup, message=FALSE}
 library(magrittr)
 library(tidyverse)
 library(ggrepel)
-##library(plasmut)
-devtools::load_all()
+library(plasmut)
+library(qpdf)
+
 lo <- function(p) log(p/(1-p))
 ```
 
