@@ -20,5 +20,6 @@ Suggests:
     tidyverse,
     ggrepel,
     magrittr,
-    qpdf
+    qpdf,
+    BiocStyle
 VignetteBuilder: knitr
