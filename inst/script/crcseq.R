@@ -33,4 +33,9 @@ dat <- bind_rows(p12, p13, p157) %>%
     arrange(patient, gene) %>%
     select(patient, gene, aa, position, analyte, y, n)
 crcseq <- dat
-save(crcseq, file="../data/crcseq.rda")
+
+output_dir <- "../../data"
+if (!dir.exists(output_dir)){
+    dir.create(output_dir)
+}
+save(crcseq, file=file.path(output_dir, "crcseq.rda"))

@@ -6,6 +6,19 @@
 \usage{
 importance_sampler(dat, params, save_montecarlo = TRUE)
 }
+\arguments{
+\item{dat}{data frame with observed mutant and total counts and 
+the analyte (plasma or buffy coat) it was taken from and the 
+identifiers on what the mutation is (e.g., KRASG12C) and pt id}
+
+\item{params}{list with ctc, ctdna and chip a and b beta parameters reflect
+beliefs on what fraction of fragments belong to each class;
+montecarlo.samples being the number of MC samples; prior weight is the 
+prior.weight reflects how much importance sampling to implement, closer to
+zero means more importance density considered}
+
+\item{save_montecarlo}{save more indepth monte carlo results}
+}
 \description{
 Importance sampler to estimate marginal likelihoods and Bayes factors
 }
@@ -15,10 +28,13 @@ param.list <- list(ctc=list(a=1, b=9999),
                    chip=list(a=1, b=9),
                    montecarlo.samples=50e3,
                    prior.weight=0.1)
-dat <- tibble(y=c(4, 1),
+dat <- data.frame(y=c(4, 1),
               n=c(1000, 1000),
               analyte=c("plasma", "buffy coat"),
               mutation="mutA",
               sample_id="id1")
 importance_sampler(dat, param.list)
+
+
+
 }

@@ -2,10 +2,20 @@
 % Please edit documentation in R/importance_sampler.R
 \name{plasma_somatic}
 \alias{plasma_somatic}
-\title{Estimate the marginal likelihood that variants identified in cell-free DNA are derived from tumor cells (ctDNA-derived)}
+\title{Estimate the marginal likelihood that variants identified in 
+cell-free DNA are derived from tumor cells (ctDNA-derived)}
 \usage{
 plasma_somatic(dat, params)
 }
+\arguments{
+\item{dat}{tibble containing vectors `y`and `n`; `y` and `n` should be named}
+
+\item{params}{a list with named elements that must include the following:
+`a`: prior expectation for number of plasma somatic variants
+observed in the plasma sequencing data 
+`b`: prior expectation for number of plasma fragments not containing variants}
+}
 \description{
-Estimate the marginal likelihood that variants identified in cell-free DNA are derived from tumor cells (ctDNA-derived)
+Estimate the marginal likelihood that variants identified in 
+cell-free DNA are derived from tumor cells (ctDNA-derived)
 }

@@ -1,3 +1,12 @@
+#'Generate importance samples
+#' @param y number of samples
+#' @param n number of total samples to draw
+#' @param S number of binominal samples to draw of size 1
+#' @param a importance sample beta parameter for shape
+#' @param b importance sample beta parameter for rate
+#' @param prior.weight probability of success in binomial
+#' @param model the model (wbc, etc.) that is being studied
+#' @param dna_source source of the dna (e.g., CTC)
 importance_samples <- function(y, n,
                                a, b,
                                S,
@@ -44,29 +53,29 @@ importance_samples <- function(y, n,
     result
 }
 
-#' Estimate the marginal likelihood of observing somatic mutations from CTCs present in buffy coat
-#'
-#'
+#' Estimate the marginal likelihood of observing somatic mutations
+#' from CTCs present in buffy coat
 #' p(y_w | theta_w, n_w, model_S) x p(theta_w| Model_S)
 #' theta_w | model_S  ~ beta(1, 999)  ## sequencing error or CTC
-#' @param dat tibble containing elements `y`and `n`.  The `y` and `n` vectors should be named
+#' @param dat tibble containing vectors `y`and `n`; `y` and `n` should be named
 #' @param params a list with named elements that must include the following:
-#' `gamma`: weight given to heavier-tailed prior distribution
-#' `a`: prior expectation for number of somatic variants observed in the WBC sequencing data (either by error or from a CTC)
+#' `a`: prior expectation for number of somatic variants 
+#' observed in the WBC sequencing data (either by error or from a CTC)
 #' `b`: prior expectation for number of WBCs not containing the variant
 #'
-#' @examples
-#' ## asssume we observed y_w=500 and n_w = 1000
-#' ## this is clearly germline, but to go through the machinery we would obtain the probability of observing 500 someatic
-#' ## variants (y_w) under a model where the prior for theta_w has most of the mass near zero
-#' ##    - the importance sampler does not really make sense here as it samples from a distribution that is fatter tailed than the
-#' ##      posterior -> it
 #'
 wbc_somatic <- function(dat, params){
+    # asssume we observed y_w=500 and n_w = 1000
+    # This is clearly germline, but to go through the machinery, 
+    # we would obtain the probability of observing 500 somatic
+    # variants (y_w) under a model where the prior for theta_w 
+    # has most of the mass near zero
+    # The importance sampler does not really make sense here as it samples 
+    # from a distribution that is fatter tailed than the posterior
     S <- params$montecarlo.samples
     prior.weight <- params$prior.weight
     params <- params$ctc
-    dat <- filter(dat, analyte=="buffy coat")
+    dat <- dplyr::filter(dat, analyte=="buffy coat")
     y <- dat$y
     n <- dat$n
     a <- params$a
@@ -79,13 +88,18 @@ wbc_somatic <- function(dat, params){
                                  dna_source="CTC")
 }
 
-#' Estimate the marginal likelihood that variants identified in cell-free DNA are derived from tumor cells (ctDNA-derived)
-#'
+#' Estimate the marginal likelihood that variants identified in 
+#' cell-free DNA are derived from tumor cells (ctDNA-derived)
+#' @param dat tibble containing vectors `y`and `n`; `y` and `n` should be named
+#' @param params a list with named elements that must include the following:
+#' `a`: prior expectation for number of plasma somatic variants
+#' observed in the plasma sequencing data 
+#' `b`: prior expectation for number of plasma fragments not containing variants
 plasma_somatic <- function(dat, params){
     prior.weight <- params$prior.weight
     S <- params$montecarlo.samples
     params <- params$ctdna
-    dat <- filter(dat, analyte=="plasma")
+    dat <- dplyr::filter(dat, analyte=="plasma")
     y <- dat$y
     n <- dat$n
     a <- params$a
@@ -99,13 +113,22 @@ plasma_somatic <- function(dat, params){
     return(result)
 }
 
-#' Estimate the marginal likelihood that mutations in buffy coat and cfDNA reflect CH or correspond to germline mutations.
-#'
-#' If germline, the allele frequency should be 50%.  The prior should be diffuse enough to handle CHIP mutations (potentially << 50%).
-#'
+#' Estimate the marginal likelihood that mutations in buffy coat 
+#' and cfDNA reflect CH or correspond to germline mutations.
+#' If germline, the allele frequency should be 50 percent.  
+#' The prior should be diffuse enough to handle CHIP mutations which are
+#' potentially way less than 50 percent
+#' @param dat tibble containing vectors yand n. y and n should be named
+#' @param params a list with named elements that must include the following
+#' a which is the prior expectation for number of CH or germline variants
+#' observed in the sequencing data
+#' b which is the prior expectation for number of fragments 
+#' reflecting CH or germline
 model_w <- function(dat, params){
-    ##    - We use g to propose values of theta and evaluate the likelihood of the observed data in plasma and WBCs given this value
-    ##    - If we use a beta (1, 10) for example, this should be diffuse enough to capture germline
+    #We use g to propose values of theta and evaluate the 
+    #likelihood of the observed data in plasma and WBCs given this value
+    #If we use a beta (1, 10) for example
+    #this should be diffuse enough to capture germline
     prior.weight <- params$prior.weight
     S <- params$montecarlo.samples
     params <- params$chip
@@ -165,12 +188,24 @@ model_w <- function(dat, params){
 #'                    chip=list(a=1, b=9),
 #'                    montecarlo.samples=50e3,
 #'                    prior.weight=0.1)
-#' dat <- tibble(y=c(4, 1),
+#' dat <- data.frame(y=c(4, 1),
 #'               n=c(1000, 1000),
 #'               analyte=c("plasma", "buffy coat"),
 #'               mutation="mutA",
 #'               sample_id="id1")
 #' importance_sampler(dat, param.list)
+#'
+#'
+#'
+#' @param dat data frame with observed mutant and total counts and 
+#' the analyte (plasma or buffy coat) it was taken from and the 
+#' identifiers on what the mutation is (e.g., KRASG12C) and pt id
+#' @param params list with ctc, ctdna and chip a and b beta parameters reflect
+#' beliefs on what fraction of fragments belong to each class;
+#' montecarlo.samples being the number of MC samples; prior weight is the 
+#' prior.weight reflects how much importance sampling to implement, closer to
+#' zero means more importance density considered
+#' @param save_montecarlo save more indepth monte carlo results
 #' @export
 importance_sampler <- function(dat, params, save_montecarlo=TRUE){
     ##

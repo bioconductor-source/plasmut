@@ -7,15 +7,16 @@ Maintainer: Adith Arun <adith.3.arun@gmail.com>
 Description: Bayesian method for quantifying liklihood a given plasma mutation arises from clonal hematopoesis or the underlying tumor given sequencing data of the mutation in plasma and white blood cells.
 License: Artistic-2.0
 Encoding: UTF-8
-LazyData: true
 RoxygenNote: 7.2.3
 Imports:
-    tidyverse,
+    tibble,
+    stats,
+    dplyr,
     magrittr,
     scales,
-    qpdf,
-    rjags,
-    ggmcmc
+    qpdf
+Depends: 
+    R (>= 3.5.0)
 Suggests:
     knitr,
     rmarkdown
