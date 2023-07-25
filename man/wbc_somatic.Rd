@@ -13,7 +13,7 @@ wbc_somatic(dat, params)
 \item{dat}{tibble containing vectors `y`and `n`; `y` and `n` should be named}
 
 \item{params}{a list with named elements that must include the following:
-`a`: prior expectation for number of somatic variants 
+`a`: prior expectation for number of somatic variants
 observed in the WBC sequencing data (either by error or from a CTC)
 `b`: prior expectation for number of WBCs not containing the variant}
 }

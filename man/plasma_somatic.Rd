@@ -2,7 +2,7 @@
 % Please edit documentation in R/importance_sampler.R
 \name{plasma_somatic}
 \alias{plasma_somatic}
-\title{Estimate the marginal likelihood that variants identified in 
+\title{Estimate the marginal likelihood that variants identified in
 cell-free DNA are derived from tumor cells (ctDNA-derived)}
 \usage{
 plasma_somatic(dat, params)
@@ -12,11 +12,11 @@ plasma_somatic(dat, params)
 
 \item{params}{a list with named elements that must include the following:
 `a`: prior expectation for number of plasma somatic variants
-observed in the plasma sequencing data 
+observed in the plasma sequencing data
 `b`: prior expectation for number of plasma fragments not containing variants}
 }
 \description{
-Estimate the marginal likelihood that variants identified in 
+Estimate the marginal likelihood that variants identified in
 cell-free DNA are derived from tumor cells (ctDNA-derived)
 }
 \examples{

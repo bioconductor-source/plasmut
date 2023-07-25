@@ -1,13 +1,15 @@
 ---
-title: "Estimating the marginal likelihood from importance sampling"
+title: "Modeling the origin of mutations in a liquid biopsy: cancer or clonal hematopoiesis?"
 author: "Adith S. Arun and Robert B. Scharpf"
 date: "`r format(Sys.Date())`"
 output: rmarkdown::html_vignette
 vignette: >
-  %\VignetteIndexEntry{plasmut}
+  %\VignetteIndexEntry{Modeling the origin of mutations in a liquid biopsy: cancer or clonal hematopoiesis?}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
+
+
 
 ```{r setup, message=FALSE}
 library(magrittr)

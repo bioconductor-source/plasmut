@@ -2,9 +2,9 @@
 % Please edit documentation in R/importance_sampler.R
 \name{model_w}
 \alias{model_w}
-\title{Estimate the marginal likelihood that mutations in buffy coat 
+\title{Estimate the marginal likelihood that mutations in buffy coat
 and cfDNA reflect CH or correspond to germline mutations.
-If germline, the allele frequency should be 50 percent.  
+If germline, the allele frequency should be 50 percent.
 The prior should be diffuse enough to handle CHIP mutations which are
 potentially way less than 50 percent}
 \usage{
@@ -16,13 +16,13 @@ model_w(dat, params)
 \item{params}{a list with named elements that must include the following
 a which is the prior expectation for number of CH or germline variants
 observed in the sequencing data
-b which is the prior expectation for number of fragments 
+b which is the prior expectation for number of fragments
 reflecting CH or germline}
 }
 \description{
-Estimate the marginal likelihood that mutations in buffy coat 
+Estimate the marginal likelihood that mutations in buffy coat
 and cfDNA reflect CH or correspond to germline mutations.
-If germline, the allele frequency should be 50 percent.  
+If germline, the allele frequency should be 50 percent.
 The prior should be diffuse enough to handle CHIP mutations which are
 potentially way less than 50 percent
 }

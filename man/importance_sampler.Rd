@@ -7,13 +7,13 @@
 importance_sampler(dat, params, save_montecarlo = TRUE)
 }
 \arguments{
-\item{dat}{data frame with observed mutant and total counts and 
-the analyte (plasma or buffy coat) it was taken from and the 
+\item{dat}{data frame with observed mutant and total counts and
+the analyte (plasma or buffy coat) it was taken from and the
 identifiers on what the mutation is (e.g., KRASG12C) and pt id}
 
 \item{params}{list with ctc, ctdna and chip a and b beta parameters reflect
 beliefs on what fraction of fragments belong to each class;
-montecarlo.samples being the number of MC samples; prior weight is the 
+montecarlo.samples being the number of MC samples; prior weight is the
 prior.weight reflects how much importance sampling to implement, closer to
 zero means more importance density considered}
 

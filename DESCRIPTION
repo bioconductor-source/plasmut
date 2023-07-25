@@ -11,13 +11,14 @@ RoxygenNote: 7.2.3
 Imports:
     tibble,
     stats,
-    dplyr,
-    magrittr,
-    scales,
-    qpdf
+    dplyr
 Depends: 
     R (>= 3.5.0)
 Suggests:
     knitr,
-    rmarkdown
+    rmarkdown,
+    tidyverse,
+    ggrepel,
+    magrittr,
+    qpdf
 VignetteBuilder: knitr
