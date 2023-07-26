@@ -11,3 +11,6 @@ inst/doc
 /inst/extdata/JAGS-IS-comparison.rds
 .DS_Store
 /vignettes/comparisons_to_jags.rmd
+/vignettes/plasmut_cache/
+/vignettes/plasmut_files/
+/vignettes/scratch.rmd

@@ -1,5 +1,5 @@
 ---
-title: "Modeling the origin of mutations in a liquid biopsy: cancer or clonal hematopoiesis?"
+title: "Modeling the origin of mutations identified in a liquid biopsy: cancer or clonal hematopoiesis?"
 author: "Adith S. Arun and Robert B. Scharpf"
 date: "`r format(Sys.Date())`"
 output: BiocStyle::html_document
@@ -11,23 +11,8 @@ vignette: >
   %\VignetteEncoding{UTF-8}
 ---
 
+# Introduction
 
-
-```{r setup, message=FALSE}
-library(magrittr)
-library(tidyverse)
-library(ggrepel)
-library(plasmut)
-library(qpdf)
-
-lo <- function(p) log(p/(1-p))
-```
-
-# Basic idea
-
-The general idea for importance sampling is that we want to sample $\theta$'s from a density that has a similar shape as the posterior but fatter tails so that we avoid spending time on simulations that have very low probability. Importance sampling should make estimation of the marginal likelihood more efficient, and the resulting Bayes factor estimates more stable with fewer Monte Carlo samples.  Below, we demonstrate the approach with two toy examples that illustrate the potential impact of prior information regarding circulating tumor cells, and how a single observed mutation in the buffy coat can shift inference from very weak evidence of a tumor-derived variant to very strong evidence of a tumor-derived variant.  (Not sure if this is the main point we want to make)
-
-## Scenario A
 Suppose we identified 4 fragments with a variant out of 1000 cell-free DNA (cfDNA) fragments in plasma, and 1 fragment with the same mutation in sequenced white blood cells.
 The possible scenarios that explain the observed data are:
 (1) the variant is tumor-derived and some CTCs are mixed in with the WBCs,
@@ -35,31 +20,20 @@ The possible scenarios that explain the observed data are:
 A third explanation is sequencing error, but after removing PCR duplicates the probability of observing the same event in plasma and WBCs should be negligible relative to the scenarios listed above.
 In the absence of additional information, our prior for the prevalence of CTCs inter-mixed with WBCs will be influential on how we interpret this data.
 
-## Scenario B
-- If we had instead observed 0 fragments with this mutation in WBCs, the evidence in favor of (1) or (2) should be similar (the only difference is 1 fragment in the WBCs).  A heuristic would likely rule scenario A as CHIP and scenario B as somatic.
+# Data organization
 
-## Model assumptions / priors
-Below, we assume that
-(1) the probability that CTCs are mixed in with the WBCs is small (e.g., 1 CTC per 10,000 WBCs) using a Beta(1, 9999) prior,
-(2) the prior for the MAF of ctDNA in plasma is relatively diffuse (Beta(1, 9)), and
-(3) the prior for germline or CHIP variants in WBCs is also relatively diffuse (Beta(1, 9)).
-
-Our importance sampler will be a mix of the prior and posterior with a default weight of 0.1 on the prior, resulting in a fatter tailed distribution than the posterior.
-
-```{r parameters}
-## Parameters
-param.list <- list(ctc=list(a=1, b=10e3),
-                   ctdna=list(a=1, b=9),
-                   chip=list(a=1, b=9),
-                   montecarlo.samples=50e3,
-                   prior.weight=0.1)
+```{r setup, message=FALSE}
+library(magrittr)
+library(tidyverse)
+library(ggrepel)
+library(plasmut)
+library(qpdf)
+knitr::opts_chunk$set(cache=TRUE)
+lo <- function(p) log(p/(1-p))
 ```
-
-## Data wrangling
 
 We assume the following minimal representation for the mutation data such that each row uniquely identifies a mutation within a sample.
 As inference for a mutation is independent of other mutations in the same sample, the Bayesian model is implemented independently for each row in the table.
-
 
 ```{r data_wrangling}
 ## Data
@@ -81,9 +55,31 @@ dat <- bind_rows(datA, datB) %>%
 dat
 ```
 
+
+# Approach and implementation
+
+The general idea for importance sampling is that we want to sample $\theta$'s from a density that has a similar shape as the posterior but fatter tails so that we avoid spending time on simulations that have very low likelihood. Importance sampling should make estimation of the marginal likelihood more efficient, and the resulting Bayes factor estimates more stable with fewer Monte Carlo samples.
+
+## Model assumptions and priors
+Below, we assume that
+(1) the probability that CTCs are mixed in with the WBCs is small (e.g., 1 CTC per 10,000 WBCs) using a Beta(1, 9999) prior,
+(2) the prior for the MAF of ctDNA in plasma is relatively diffuse (Beta(1, 9)), and
+(3) the prior for germline or CHIP variants in WBCs is also relatively diffuse (Beta(1, 9)).
+
+Our importance sampler will be a mix of the prior and posterior with a default weight of 0.1 on the prior, resulting in a fatter tailed distribution than the posterior.
+
+```{r parameters}
+## Parameters
+param.list <- list(ctc=list(a=1, b=10e3),
+                   ctdna=list(a=1, b=9),
+                   chip=list(a=1, b=9),
+                   montecarlo.samples=50e3,
+                   prior.weight=0.1)
+```
+
 ## Monte Carlo estimation of the marginal likelihood and Bayes factors
 
-Below, we call a wrapper for the importance samplers that estimates the marginal likelihood for the mutation frequencies under two models:  (1) a somatic model that assumes that any mutations in plasma and buffy coat are tumor derived, and (2) a germline or CHIP model that assumes that the mutations observed in plasma and buffy coat are not tumor-derived.  All Monte Carlo samples are saved by default.  For running this model on large datasets, we recommend saving only the marginal likelihoods and Bayes factors by setting  `save_montecarlo=FALSE`.
+Below, we estimate the marginal likelihood for the mutation frequencies under two models:  (1) a somatic model that assumes that any mutations in plasma and buffy coat are tumor derived, and (2) a germline or CHIP model that assumes that the mutations observed in plasma and buffy coat are not tumor-derived.  All Monte Carlo samples are saved by default.  For running this model on large datasets, we recommend saving only the marginal likelihoods and Bayes factors by setting  `save_montecarlo=FALSE`.
 
 ```{r montecarlo}
 stats <- importance_sampler(dat$data[[1]], param.list)
@@ -92,46 +88,17 @@ stats  ## with all the monte carlo samples
 importance_sampler(dat$data[[1]], param.list, save_montecarlo=FALSE)
 ```
 
-With our strong prior that CTCs are rare, we view the plasma MAF of 4/1000 and buffy coat MAF of 1/1000 as very weak evidence that the mutation is tumor derived (log Bayes factor `round(stats$bayesfactor$bayesfactor, 2)`).  Had we instead observed no mutations in buffy coat (scenario B below), the log Bayes factor increases by 3 and we would conclude that there is strong evidence in support of a tumor-derived mutation.
+With our prior that CTCs are rare, we view the plasma MAF of 4/1000 and buffy coat MAF of 1/1000 as very weak evidence that the mutation is tumor derived (log Bayes factor `round(stats$bayesfactor$bayesfactor, 2)`).  Had we instead observed no mutations in buffy coat, the log Bayes factor increases by 3 and we would conclude that there is strong evidence in support of a tumor-derived mutation.
 
 ```{r scenariob}
 importance_sampler(dat$data[[2]], param.list, save_montecarlo=FALSE)
 ```
 
-Note, that the log marginal likelihood of the CTC model is higher as observing no mutations in 1000 reads from buffy coat is more consistent with our prior; and the log marginal likelihood of the chip model decreases 1 as we would anticipate observing mutant reads in the buffy coat if the mutation was derived from CHIP.
+Note, that the log marginal likelihood of the CTC model is higher as observing no mutations in 1000 reads from buffy coat is more consistent with our prior; and the log marginal likelihood of the chip model decreases as we would anticipate observing mutant reads in the buffy coat if the mutation was derived from CHIP.
 
+## Efficiency of importance sampler
 
-### Underneath the hood
-
-For tumor-derived mutations, the MAF observed in plasma from ctDNA is likely to be quite different than the MAF observed in buffy coat as we expect the proportion of CTCs in buffy coat to differ from the proportion of cfDNA that is derived from tumor cells.  Currently, we model the marginal likelihood from these two analytes independently using the following two functions.
-
-
-```{r tumor_derived}
-## Tumor-derived
-ctcs <- wbc_somatic(dat$data[[1]], param.list)
-ctdna <- plasma_somatic(dat$data[[1]], param.list)
-logmarglik <- log(ctcs$marglik) + log(ctdna$marglik)
-```
-
-While cfDNA fragmentation is influenced by chromatin structure of mostly hematopoietic cells and buffy coat sequencing would not be affected by chromatin structure, we hypothesize that the proportion of germline / CHIP derived variants would still be similar in these two analytes.
-
-```{r germline_or_chip}
-chip <- model_w(dat$data[[1]], param.list)
-```
-
-The Bayes factor for the tumor-derived model is given by `r round(logmarglik - log(chip$marglik), 2)`, suggesting that there is very weak evidence that the mutation is tumor-derived in Scenario A.  An investigator with data suggesting that CTCs in buffy coat are more likely would have a different prior and a larger Bayes factor supporting the tumor-derived model:
-
-```{r different_prior}
-param.list2 <- param.list
-param.list2$ctc <- list(a=1, b=499)
-ctcs2 <- wbc_somatic(dat$data[[1]], param.list2)
-bf2 <- round(log(ctcs2$marglik) + log(ctdna$marglik) - log(chip$marglik), 2)
-round(bf2, 3)
-```
-
-# Efficiency of importance sampler
-
-As long as `montecarlo.samples` is big enough, we should obtain a similar estimate of the marginal likelihood, without importance sampling.
+As long as `montecarlo.samples` is big enough, we should obtain a similar estimate of the marginal likelihood without importance sampling.
 Since our target distribution $g$ is a mixture of the prior and posterior with weight `prior.weight`, setting `prior.weight=1` just samples $\theta$'s from our prior (i.e., importance sampling is not implemented).  Below, we compare the stability of the Bayes factor estimate as a function of the Monte Carlo sample size and prior weight:
 
 ```{r prior.weight, cache=TRUE}
@@ -194,317 +161,22 @@ combined %>%
     xlab("Prior weight")
 ```
 
-## Numerical underflow
-
-In some cases, the marginal likelihood may be near zero.
-
-```{r numerical}
-df <- tibble(y=c(857, 0),
-             n=c(1349, 1547),
-             analyte=c("plasma", "buffy coat"),
-             gene="TP53",
-             patient="id1") %>%
-    group_by(patient) %>%
-    nest()
-## If germline we would expect the MAF to be near 0.5
-## Since MAF in plasma is 0.63, we might expect the MAF (if CHIP-derived) in plasma to also be near 0.63
-## Here is the issue
-dbinom(0, 1547, prob=0.5)
-## We would need to use the log to prevent numerical underflow
-dbinom(0, 1547, prob=0.5, log=TRUE)
-## But we have to average lik*prior*g to obtain marginal likelihood
-## Since many of these cases are likely to be obviously tumor-derived or obviously CHIP (Inf or -Inf for Bayes factor), fixing the numerical underflow is not a high priority
-```
-
-# Relationship between priors, marginal likelihood, and Bayes factors
+## Relationship between priors, marginal likelihood, and Bayes factors
 
 As previous discussed, the target distribution for importance sampling, denoted by *g*, is a mixture of the posterior and prior with a default weight of 0.1 on the prior.  The following code can be used to visualize the relationship between the posterior, prior, and *g* for mutations in cfDNA conditional on the tumor-derived model:
 
 
-```{r g, fig.width=15, fig.height=5}
-ml_labels <- function(x){
-    labels <- x$bayesfactor %>%
-        select(-bayesfactor) %>%
-        pivot_longer(cols=everything(),
-                     names_to="dna_source",
-                     values_to="marginal_lik") %>%
-        mutate(dna_source=c("CTC", "ctDNA", "WBC")) %>%
-        mutate(marginal_lik=round(marginal_lik, 2),
-               label=paste0("log m(y)=", marginal_lik))
-    labels
-}
-ml <- ml_labels(stats)
-stats$samples %>%
-    ##filter(dna_source=="ctDNA") %>%
-    pivot_longer(!c(dna_source, model),
-                 names_to="distribution",
-                 values_to="samples") %>%
-    mutate(distribution=factor(distribution, c("prior", "posterior", "g"))) %>%
-    ggplot(aes(lo(samples))) +
-    geom_density(aes(color=distribution),
-                 linewidth=1.2) +
-    theme_bw(base_size=16) +
-    theme(panel.grid=element_blank(),
-          strip.background=element_blank()) +
-    scale_y_sqrt() +
-    facet_wrap(~dna_source, scales="free") +
-    xlab(expression(log(odds(theta))))
-ml.tumor <- round(sum(ml$marginal_lik[1:2]), 2)
-ml.chip <- round(ml$marginal_lik[3], 2)
-bf <- round(stats$bayesfactor$bayesfactor, 2)
-bf.text <- paste0(ml.tumor, "-", ml.chip, " = ", bf)
+
+
+# Application to van't Erve et al.
+
+
+```{r vanterve}
+data(crcseq)
 ```
 
-Below, panels CTC and ctDNA indicate the likelihood of the observed MAFs as a function of $\theta$ in the buffy coat and plasma, respectively, conditional on the model that the mutations are tumor-derived (i.e., from CTCs mixed in with the buffy coat and from ctDNA in plasma).
-For the WBC panel, we assume that the MAF in plasma and blood are derived from CHIP.
-We assume a single $\theta$ is sufficient for characterizing the MAF of these two data sources.  In particular,  the likelihood is the product of two binomials conditional on the same $\theta$.
-The Bayes factor is obtained by the product of the two marginal likelihoods calculated under the tumor-derived model (panels 1 and 2:  0.0827 x 0.0087= `r ml.tumor`) divided by the `r round(ml$marginal_lik[3], 4)` marginal likelihood of the CHIP model (Bayes factor `r bf.text`).
+# Session information
 
-```{r ml, fig.width=15, fig.height=5}
-stats$densities %>%
-    left_join(ml, by="dna_source") %>%
-    mutate(m.y=lik*prior/g) %>%
-    ## thetas were sampled from g
-    mutate(theta=stats$samples$g) %>%
-    group_by(dna_source) %>%
-    arrange(theta) %>%
-    ungroup() %>%
-    ggplot(aes(lo(theta), m.y)) +
-    geom_line() +
-    geom_ribbon(aes(ymin=0, ymax=m.y), fill="gray") +
-    theme_bw(base_size=16) +
-    theme(panel.grid=element_blank(),
-          strip.background=element_blank()) +
-    scale_y_sqrt() +
-    facet_wrap(~dna_source, scales="free_y") +
-    xlab(expression(log(odds(theta)))) +
-    ylab(expression(p(y*"|"*theta)*p(theta)/g(theta))) +
-    guides(fill=guide_legend(title="Marginal likelihoods")) +
-    geom_text(data=ml, x=Inf, y=Inf, aes(label=label),
-              vjust=1.2, hjust=1.2,
-              size=5)
-```
-
-In the above analyses, we used an informative prior that CTCs are rare events (1 in 10,000 cells) and denote the marginal likelihood by m(y).
-Below, we evaluate the sensitivity of the marginal likelihood to different choices of this prior.
-The prior models below correspond to Beta(1, 9999/c) for c=10, 100, and 1000.
-
-```{r prior.models, fig.width=15, fig.height=10}
-c <- c(10, 100, 1000)
-ctc_prior <- function(c, param.list){
-    param.list[["ctc"]][["b"]] <- param.list[["ctc"]][["b"]]/c
-    param.list
-}
-param.list2 <- c %>%
-    map(ctc_prior, param.list)
-## write a function to organize the data for plotting
-ml_data <- function(x){
-    ml <- ml_labels(x)
-    b <- x$params$ctc[["b"]]
-    thetas <- x$samples$g
-    d <- x$densities %>%
-        left_join(ml, by="dna_source") %>%
-        mutate(m.y=lik * prior / g,
-               theta=thetas) %>%
-        group_by(dna_source) %>%
-        arrange(theta) %>%
-        ungroup() %>%
-        mutate(ctc.prior=paste0("Beta(1, ", b, ")"))
-    d
-}
-IS.list <- param.list2 %>%
-    map(.f=importance_sampler, .x=., dat=stats$data)
-ml_labels2 <- function(x){
-    b <- x$params$ctc[["b"]]
-    x <- ml_labels(x) %>%
-        mutate(ctc.prior=paste0("Beta(1, ", b, ")"))
-}
-mls <- IS.list %>% map_dfr(ml_labels2)
-bfs <- mls %>%
-    group_by(ctc.prior) %>%
-    summarize(ml.tumor=sum(marginal_lik[dna_source%in% c("CTC", "ctDNA")]),
-              ml.chip=marginal_lik[dna_source=="WBC"]) %>%
-    mutate(bf=round(ml.tumor-ml.chip, 2))
-d <- IS.list %>%
-    map_dfr(ml_data)
-##plot(1, xlab=expression(p(y*"|"*theta)*p(theta)/g(theta)))
-d %>%
-    ggplot(aes(lo(theta), m.y)) +
-    geom_line() +
-    geom_ribbon(aes(ymin=0, ymax=m.y), fill="gray")+
-    theme_bw(base_size=20) +
-    theme(panel.grid=element_blank(),
-          strip.background=element_blank()) +
-    scale_y_sqrt() +
-    facet_grid(ctc.prior~dna_source) +
-    ylab(expression(p(y*"|"*theta)*p(theta)/g(theta))) +
-    xlab(expression(log(odds(theta)))) +
-    guides(fill=guide_legend(title="Marginal likelihoods")) +
-    geom_text(data=mls, x=Inf, y=Inf, aes(label=label),
-              vjust=1.2, hjust=1.2,
-              size=5) +
-    theme(strip.text.y=element_text(angle=0))
-```
-
-As the strength of the prior for the rarity of CTCs increases from top to bottom, the Bayes factor that the single mutation observed in the buffy coat out of 1000 fragments is derived from CTC increases from `r bfs$bf[1]` (top row) to `r bfs$bf[3]` (bottom row).  For very rare events in buffy coat, a strong prior that CTCs are also rare favors the tumor-derived model.  For common events in buffy coat, a strong prior that CTCs are rare favors the CHIP-derived model.
-
-
-# Evaluation on empirical data from Medina et al.
-
-Read in the Median et al. data and wrangle to format required for the `plasmut` package.
-WBC is available only at baseline, though presumably the MAFs are available at all timepoints for cfDNA.
-
-```{r vantveer}
-clean_colnames <- function(x){
-    nms <- colnames(x) %>%
-        tolower() %>%
-        str_replace_all(" ", "_")
-    colnames(x) <- nms
-    x
-}
-extdir <- system.file("extdata", package="plasmut")
-fpath <- file.path(extdir, "cairo5-matched-sequencing.csv")
-df <- read_csv(fpath, show_col_types=FALSE) %>%
-    type.convert(as.is=TRUE)
-df2 <- df %>%
-    clean_colnames()
-colnames(df2)[c(9, 8)] <- c("y", "n")
-```
-
-```{r empirical_data_wrangling}
-cfdna <- df %>%
-    select(Gene, Patient, `AAChange`,
-           `cfDNA distinct mutant reads`,
-           `cfDNA distinct reads`) %>%
-    set_colnames(c("gene", "patient",
-                   "position", "y", "n")) %>%
-    mutate(analyte="plasma")
-buffy <- df %>%
-    select(Gene, Patient, `AAChange`,
-           `wbc distinct reads`,
-           `wbc distinct mutant reads`) %>%
-    set_colnames(c("gene", "patient", "position", "n", "y")) %>%
-    mutate(analyte="buffy coat")
-dat <- bind_rows(cfdna, buffy) %>%
-    unite("uid", c("gene", "patient", "position"), remove=FALSE) %>%
-    group_by(uid) %>%
-    nest()
-is_valid <- function(dat){
-    !any(is.na(c(dat$y, dat$n))) & all(dat$n > 0)
-}
-valid <- map_lgl(dat$data, is_valid)
-dat2 <- dat[valid, ]
-##Put importance sampler (IS) results in existing tibble
-dat2$IS <- dat2$data %>%
-    map(importance_sampler, params=param.list,
-        save_montecarlo=FALSE)
-bayes_factor <- function(x){
-    fun <- function(df) df$bayesfactor
-    bf <- x$IS %>%
-        map_dbl(fun)
-    bf
-}
-tumor.derived <- dat2[bayes_factor(dat2) >= log(10), ]
-tumor.derived$IS %>%
-    do.call(bind_rows, .)
-chip.derived <- dat2[bayes_factor(dat2) <= log(0.1), ]
-chip.derived$IS %>%
-    do.call(bind_rows, .)
-## we might want to look at these more closely
-undecided <- dat2[bayes_factor(dat2) > log(0.1) &
-                  bayes_factor(dat2) < log(10), ]
-```
-
-Appears that there was a requirement that their had to be 4 mutant reads in plasma.
-
-
-# Figures
-
-For manuscript, choose an example from `tumor.derived`, `chip.derived`, and `undecided`.   Plot the sampling distributions for the posterior, prior, and g.  Plot p(y| theta) * p(theta)/g(theta) and indicate the marginal likelihood in the upper right corner (as above).
-
-```{r fig.width=12, fig.height=10}
-examples <- bind_rows(tumor.derived[1, ],
-                      undecided[1, ],
-                      chip.derived[2, ])
-examples.is <- examples$data %>%
-    map(importance_sampler, params=param.list, save_montecarlo=TRUE)
-genes <- examples$data %>%
-    map_chr(function(x) x$gene[[1]])
-ml.list <- examples.is %>%
-    map_dfr(ml_labels) %>%
-    mutate(gene=rep(genes, each=3))
-fig.samples <- examples.is %>%
-    map_dfr(function(x) x$samples) %>%
-    mutate(gene=rep(genes, each=150e3)) %>%
-    ##filter(dna_source=="ctDNA") %>%
-    pivot_longer(!c(dna_source, model, gene),
-                 names_to="distribution",
-                 values_to="samples") %>%
-    mutate(distribution=factor(distribution, c("prior", "posterior", "g"))) %>%
-    ggplot(aes(lo(samples))) +
-    geom_density(aes(color=distribution),
-                 size=1.2) +
-    theme_bw(base_size=16) +
-    theme(panel.grid=element_blank(),
-          strip.background=element_blank(),
-          strip.text.y=element_text(angle=0)) +
-    scale_y_sqrt() +
-    facet_grid(gene~dna_source, scales="free") +
-    xlab(expression(log(odds(theta))))
-fig.samples
-d <- examples.is %>%
-    map_dfr(ml_data) %>%
-    mutate(gene=rep(genes, each=150e3))
-mls <- examples.is %>% map_dfr(ml_labels2) %>%
-    mutate(gene=rep(genes, each=3))
-##plot(1, xlab=expression(p(y*"|"*theta)*p(theta)/g(theta)))
-fig.d <- d %>%
-    ggplot(aes(lo(theta), m.y)) +
-    geom_line() +
-    geom_ribbon(aes(ymin=0, ymax=m.y), fill="gray")+
-    theme_bw(base_size=20) +
-    theme(panel.grid=element_blank(),
-          strip.background=element_blank()) +
-    scale_y_sqrt() +
-    facet_grid(gene~dna_source) +
-    ylab(expression(p(y*"|"*theta)*p(theta)/g(theta))) +
-    xlab(expression(log(odds(theta)))) +
-    guides(fill=guide_legend(title="Marginal likelihoods")) +
-    geom_text(data=mls, x=Inf, y=Inf, aes(label=label),
-              vjust=1.2, hjust=1.2,
-              size=5) +
-    theme(strip.text.y=element_text(angle=0))
-fig.d
-bfs <- round(bayes_factor(examples), 2)
-
-plasma <- examples$data %>%
-    bind_rows() %>%
-    filter(analyte=="plasma")
-buffy <- examples$data %>%
-    bind_rows() %>%
-    filter(analyte=="buffy coat")
-joint <- left_join(plasma, buffy, by=c("gene", "patient"),
-                   suffix=c(".plasma", ".buffy")) %>%
-    unite(label.plasma, c(y.plasma, n.plasma), sep="/", remove=FALSE) %>%
-    unite(label.buffy, c(y.buffy, n.buffy), sep="/", remove=FALSE) %>%
-    unite(label, c(label.plasma, label.buffy), sep=", ", remove=FALSE) %>%
-    mutate(label=paste0(gene, " (", label, ")")) %>%
-    mutate(bayesfactor=bfs)
-```
-
-
-```{r data_bf}
-joint %>%
-    mutate(gene=factor(gene)) %>%
-    ggplot(aes(bayesfactor, gene)) +
-    geom_point() +
-    theme_bw(base_size=16) +
-    ##facet_wrap(~gene, ncol=1) +
-    geom_text_repel(aes(label=label), hjust=-0.2, vjust=0.5) +
-    ylab("") +
-    facet_wrap(~gene, ncol=1, scales="free_y") +
-    xlab(expression(log[10]("Bayes factor"))) +
-    theme(panel.grid=element_blank(),
-          strip.background=element_blank(),
-          strip.text=element_blank())
+```{r session}
+sessionInfo()
 ```
