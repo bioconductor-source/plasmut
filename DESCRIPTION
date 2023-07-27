@@ -1,7 +1,7 @@
 Package: plasmut
 Type: Package
 Title: Stratifying mutations observed in cell-free DNA and white blood cells as germline, hematopoietic, or somatic
-Version: 0.1.1
+Version: 0.1.99
 Author: Adith S. Arun and Robert B. Scharpf
 Maintainer: Adith Arun <adith.3.arun@gmail.com>
 Description: Bayesian method for quantifying liklihood a given plasma mutation arises from clonal hematopoesis or the underlying tumor given sequencing data of the mutation in plasma and white blood cells.
