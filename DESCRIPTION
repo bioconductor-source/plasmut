@@ -2,18 +2,25 @@ Package: plasmut
 Type: Package
 Title: Stratifying mutations observed in cell-free DNA and white blood cells as germline, hematopoietic, or somatic
 Version: 0.1.99
-Author: Adith S. Arun and Robert B. Scharpf
-Maintainer: Adith Arun <adith.3.arun@gmail.com>
-Description: Bayesian method for quantifying liklihood a given plasma mutation arises from clonal hematopoesis or the underlying tumor given sequencing data of the mutation in plasma and white blood cells.
+Authors@R: 
+  c(person(given = "Adith",
+           family = "Arun",
+           role = c("aut", "cre"),
+           email = "adith.3.arun@gmail.com"),
+    person(given = "Robert",
+           family = "Scharpf",
+           role = "aut"))
+Description: A Bayesian method for quantifying the liklihood that a given plasma mutation arises from clonal hematopoesis or the underlying tumor. It requires sequencing data of the mutation in plasma and white blood cells with the number of distinct and mutant reads in both tissues. We implement a Monte Carlo importance sampling method to assess the likelihood that a mutation arises from the tumor relative to non-tumor origin. 
 License: Artistic-2.0
 Encoding: UTF-8
+biocViews: Bayesian, SomaticMutation, GermlineMutation, Sequencing
 RoxygenNote: 7.2.3
 Imports:
     tibble,
     stats,
     dplyr
 Depends: 
-    R (>= 3.5.0)
+    R (>= 4.1.0)
 Suggests:
     knitr,
     rmarkdown,
@@ -21,5 +28,6 @@ Suggests:
     ggrepel,
     magrittr,
     qpdf,
-    BiocStyle
+    BiocStyle,
+    biocViews
 VignetteBuilder: knitr

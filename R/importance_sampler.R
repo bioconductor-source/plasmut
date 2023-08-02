@@ -7,6 +7,7 @@
 #' @param prior.weight probability of success in binomial
 #' @param model the model (wbc, etc.) that is being studied
 #' @param dna_source source of the dna (e.g., CTC)
+#' @return list with monte carlo samples, probability densities, and likelihoods
 importance_samples <- function(y, n,
                                a, b,
                                S,
@@ -74,6 +75,7 @@ importance_samples <- function(y, n,
 #'               mutation="mutA",
 #'               sample_id="id1")
 #' wbc_somatic(dat, param.list)
+#' @return generate importance samples for wbc somatic model
 #' @export
 wbc_somatic <- function(dat, params){
     # asssume we observed y_w=500 and n_w = 1000
@@ -119,6 +121,7 @@ wbc_somatic <- function(dat, params){
 #'               mutation="mutA",
 #'               sample_id="id1")
 #' plasma_somatic(dat, param.list)
+#' @return generate importance samples for plasma somatic model
 #' @export
 plasma_somatic <- function(dat, params){
     prior.weight <- params$prior.weight
@@ -162,6 +165,8 @@ plasma_somatic <- function(dat, params){
 #'               mutation="mutA",
 #'               sample_id="id1")
 #' importance_sampler(dat, param.list)
+#' @return list of samples, probability densities, and likelihood for non-tumor
+#' assumption
 #' @export
 model_w <- function(dat, params){
     #We use g to propose values of theta and evaluate the
@@ -195,7 +200,7 @@ model_w <- function(dat, params){
     g.density <- prior.weight * g.prob.prior +
         (1-prior.weight)*g.prob.posterior
     not.finite <- !is.finite(g.density)
-    if(any(not.finite)) browser("Not finite")
+    if(any(not.finite)) print("Not finite")
     loglik.p <- dbinom(y["plasma"], n["plasma"], g.samples, log=TRUE)
     loglik.w <- dbinom(y["buffy coat"], n["buffy coat"], g.samples, log=TRUE)
     lik <- exp(loglik.p + loglik.w)
@@ -245,6 +250,8 @@ model_w <- function(dat, params){
 #' prior.weight reflects how much importance sampling to implement, closer to
 #' zero means more importance density considered
 #' @param save_montecarlo save more indepth monte carlo results
+#' @return implement importance sampling for a data set to assess probability 
+#' of tumor derived mutations from sequencing results
 #' @export
 importance_sampler <- function(dat, params, save_montecarlo=TRUE){
     ##

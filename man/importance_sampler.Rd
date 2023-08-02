@@ -19,6 +19,10 @@ zero means more importance density considered}
 
 \item{save_montecarlo}{save more indepth monte carlo results}
 }
+\value{
+implement importance sampling for a data set to assess probability 
+of tumor derived mutations from sequencing results
+}
 \description{
 Importance sampler to estimate marginal likelihoods and Bayes factors
 }

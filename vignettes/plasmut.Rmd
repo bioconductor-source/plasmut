@@ -165,9 +165,6 @@ combined %>%
 
 As previous discussed, the target distribution for importance sampling, denoted by *g*, is a mixture of the posterior and prior with a default weight of 0.1 on the prior.  The following code can be used to visualize the relationship between the posterior, prior, and *g* for mutations in cfDNA conditional on the tumor-derived model:
 
-
-
-
 # Application to van't Erve et al.
 
 

@@ -17,6 +17,9 @@ wbc_somatic(dat, params)
 observed in the WBC sequencing data (either by error or from a CTC)
 `b`: prior expectation for number of WBCs not containing the variant}
 }
+\value{
+generate importance samples for wbc somatic model
+}
 \description{
 Estimate the marginal likelihood of observing somatic mutations
 from CTCs present in buffy coat

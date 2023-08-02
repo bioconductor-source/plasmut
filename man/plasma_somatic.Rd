@@ -15,6 +15,9 @@ plasma_somatic(dat, params)
 observed in the plasma sequencing data
 `b`: prior expectation for number of plasma fragments not containing variants}
 }
+\value{
+generate importance samples for plasma somatic model
+}
 \description{
 Estimate the marginal likelihood that variants identified in
 cell-free DNA are derived from tumor cells (ctDNA-derived)

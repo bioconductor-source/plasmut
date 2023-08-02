@@ -19,6 +19,10 @@ observed in the sequencing data
 b which is the prior expectation for number of fragments
 reflecting CH or germline}
 }
+\value{
+list of samples, probability densities, and likelihood for non-tumor
+assumption
+}
 \description{
 Estimate the marginal likelihood that mutations in buffy coat
 and cfDNA reflect CH or correspond to germline mutations.
