@@ -60,11 +60,16 @@ dat
 
 # Approach and implementation
 
+## Bayesian model
+
+
+## Importance sampling
+
 The general idea for importance sampling is that we want to sample $\theta$'s from a density that has a similar shape as the posterior but fatter tails so that we avoid spending time on simulations that have very low likelihood. Importance sampling should make estimation of the marginal likelihood more efficient, and the resulting Bayes factor estimates more stable with fewer Monte Carlo samples.
 
 ## Model assumptions and priors
 Below, we assume that
-(1) the probability that CTCs are mixed in with the WBCs is small (e.g., 1 CTC per 10,000 WBCs) using a Beta(1, 9999) prior,
+(1) the probability that CTCs are mixed in with the WBCs is small (e.g., 1 CTC per 1,000 cells) using a Beta(1, 10^3) prior,
 (2) the prior for the MAF of ctDNA in plasma is relatively diffuse (Beta(1, 9)), and
 (3) the prior for germline or CHIP variants in WBCs is also relatively diffuse (Beta(1, 9)).
 
@@ -168,7 +173,6 @@ combined %>%
 As previous discussed, the target distribution for importance sampling, denoted by *g*, is a mixture of the posterior and prior with a default weight of 0.1 on the prior.  The following code can be used to visualize the relationship between the posterior, prior, and *g* for mutations in cfDNA conditional on the tumor-derived model:
 
 # Application to van't Erve et al.
-
 
 ```{r vanterve}
 data(crcseq)
