@@ -13,7 +13,8 @@ plasma_somatic(dat, params)
 \item{params}{a list with named elements that must include the following:
 `a`: prior expectation for number of plasma somatic variants
 observed in the plasma sequencing data
-`b`: prior expectation for number of plasma fragments not containing variants}
+`b`: prior expectation for number of plasma fragments 
+not containing variants}
 }
 \value{
 generate importance samples for plasma somatic model

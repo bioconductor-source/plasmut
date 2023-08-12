@@ -7,7 +7,7 @@
 #' @param prior.weight probability of success in binomial
 #' @param model the model (wbc, etc.) that is being studied
 #' @param dna_source source of the dna (e.g., CTC)
-#' @return list with monte carlo samples, probability densities, and likelihoods
+#' @return list with monte carlo samples, probability densities,and likelihoods
 importance_samples <- function(y, n,
                                a, b,
                                S,
@@ -108,7 +108,8 @@ wbc_somatic <- function(dat, params){
 #' @param params a list with named elements that must include the following:
 #' `a`: prior expectation for number of plasma somatic variants
 #' observed in the plasma sequencing data
-#' `b`: prior expectation for number of plasma fragments not containing variants
+#' `b`: prior expectation for number of plasma fragments 
+#' not containing variants
 #' @examples
 #' param.list <- list(ctc=list(a=1, b=9999),
 #'                    ctdna=list(a=1, b=9),

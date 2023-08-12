@@ -24,7 +24,7 @@ importance_samples(y, n, a, b, S, prior.weight, model, dna_source)
 \item{dna_source}{source of the dna (e.g., CTC)}
 }
 \value{
-list with monte carlo samples, probability densities, and likelihoods
+list with monte carlo samples, probability densities,and likelihoods
 }
 \description{
 Generate importance samples

@@ -29,6 +29,7 @@ library(ggrepel)
 library(plasmut)
 library(qpdf)
 knitr::opts_chunk$set(cache=TRUE)
+
 lo <- function(p) log(p/(1-p))
 ```
 
@@ -36,7 +37,7 @@ We assume the following minimal representation for the mutation data such that e
 As inference for a mutation is independent of other mutations in the same sample, the Bayesian model is implemented independently for each row in the table.
 
 ```{r data_wrangling}
-## Data
+## sample data
 datA <- tibble(y=c(4, 1),
               n=c(1000, 1000),
               analyte=c("plasma", "buffy coat"),
@@ -51,7 +52,8 @@ dat <- bind_rows(datA, datB) %>%
     unite("uid", c(sample_id, mutation), remove=FALSE) %>%
     group_by(uid) %>%
     nest()
-## Required format
+
+## required format for plasmut
 dat
 ```
 
