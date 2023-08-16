@@ -62,6 +62,11 @@ dat
 
 ## Bayesian model
 
+From matched sequencing, for a given mutation, we are given the number of mutant reads and distinct reads in plasma ($y_p$, $n_p$); the number of mutant reads and distinct reads in the buffy coat layer ($y_w$, $n_w$). Using this data, we want to estimate the posterior odds that the cell-free DNA mutation is tumor-derived. If this probability is low, the mutation may be a product of clonal hematopoiesis (CH). The posterior odds is equal to the Bayes factor times the prior odds of the mutation being tumor-derived: $\frac{p(S | y_p, y_w, n_p, n_w)}{p(H | y_p, y_w, n_p, n_w)} = \frac{p(y_w, y_p | n_p, n_w, S)}{p(y_w, y_p | n_p, n_w, H)} \cdot \frac{p(S)}{p(H)}$. 
+
+To compute the Bayes factor we must estimate the marginal likelihood when we assume the mutation is tumor-derived and CH. There exists a true but unobserved mutant allele fraction (MAF) in plasma and white blood cells, $\theta_p$ and $\theta_w$ respectively, and to estimate the marginal likelihoods, we integrate out these parameters.  When we assume the mutation is a product of CH (model H), we estimate $p(y_p, y_w | n_p, n_w, H) = \int_{\theta} p(y_p | n_p, \theta)$. This single integral is possible becuase given that the mutation is a result of CH, it is reasonable to assume that $\theta_p = \theta_w$. The prior for $\theta$ is a diffuse Beta distribution to support the possibility of both rare and common CH mutations. When we assume the mutation is tumor-derived or somatic (model S), we estimate $p(y_p, y_w | n_p, n_w, S) = \int_{\theta_p} p(y_p | n_p, \theta_p, S) d\theta_w\int_{\theta_w} p(y_w | n_w, \theta_w, S) d\theta_p$ since the double integral can be factored into two single integrals since $\theta_p$ is independent of $\theta_w$. A diffuse prior for $\theta_p$ is chosen to allow for many different somatic mutation possibilities. There are two possibilities for a prior on $\theta_w$. If we believe that there are no circulating tumor cells (CTCs) within the buffy coat layer, then $\theta_w = 0$. However, if we believe that CTCs exist within the buffy coat layer, a prior distribution near zero would be appropriate (i.e., Beta(1, $10^3$)).      
+
+We can compute marginal likelihoods for model S and H by simply drawing Monte Carlo samples from the $\theta$ priors we defined. But, when the likelihood is more concentrated than the prior, this sampling approach can be inefficient and numerically unstable. To solve these issues, we implement an importance sampling approach. 
 
 ## Importance sampling
 
@@ -168,18 +173,63 @@ combined %>%
     xlab("Prior weight")
 ```
 
-## Relationship between priors, marginal likelihood, and Bayes factors
-
-As previous discussed, the target distribution for importance sampling, denoted by *g*, is a mixture of the posterior and prior with a default weight of 0.1 on the prior.  The following code can be used to visualize the relationship between the posterior, prior, and *g* for mutations in cfDNA conditional on the tumor-derived model:
 
 # Application to van't Erve et al.
 
+We apply our methods to the dataset introduced in [van't Erve et al](https://aacrjournals.org/clincancerres/article/29/5/899/716607/Metastatic-Colorectal-Cancer-Treatment-Response). The cell-free DNA and buffy coat were sequenced for patients with metastatic colorectal cancer and we can estimate Bayes factors for these mutations. 
+
+We select four mutations and run the importance sampler for these candidate mutations independently. 
+
 ```{r vanterve}
 data(crcseq)
+
+crcseq %>% select(-position)
 ```
+
+```{r vanterve importance sampling}
+params <- list(ctdna = list(a = 1, b = 9), 
+               ctc = list(a = 1, b = 10^3), 
+               chip = list(a= 1, b = 9), 
+               montecarlo.samples = 50e3, 
+               prior.weight = 0.1)
+
+muts <- unite(crcseq, "uid", c(patient, gene), remove = FALSE) %>% 
+        group_by(uid) %>% nest()
+
+#Each element of the data column contains a table with the variant and total allele counts in plasma and buffy coat. 
+
+#Run the importance sampler
+muts$IS <- muts$data %>% map(importance_sampler, params)
+
+bf <- apply(muts, 1, function(x) x$data %>% select(-position) %>% mutate(bayes_factor = x$IS$bayesfactor$bayesfactor)) 
+
+bf %>% do.call(rbind, .) %>% as_tibble() %>% select(patient, gene, aa, bayes_factor) %>% distinct()
+```
+
+We report the log Bayes factor for the four mutations. The Bayes factor informs us of the likelihood that a mutation is tumor-derived. The log Bayes factor is equal to the log posterior odds when the prior odds of a mutation being tumor-derived are 1, which is a good uninformative assumption in the majority of cases. Let us examine the E1306* APC mutation for patient 12. When sequencing the buffy coat, we observe 0 variant reads across 963 total reads. But, when sequencing the cell-free DNA, we observed 395 variant reads across 1750 total reads. Intuitively, this means that the mutation is not found in white blood cells but is present in cell-free DNA fragments meaning that the source of the mutation must be from a non-WBC source. We expect the mutation to be a product of the tumor whose cellular turnover shed mutant DNA fragments into the bloodstream. Concordantly, the log Bayes factor is 190 which translates to a probability of being tumor derived of $\frac{exp(190)}{exp(190) + 1}$ or 1. 
+
+On the other hand, we observe 5 mutant reads across 1495 total WBC reads for the M237K TP53 mutation; 15 mutant reads across 2969 total cfDNA reads. The observed mutant read rate is roughly equal in WBC and cfDNA, and we just happen to observe more cfDNA reads in general. This suggests that the variant is likely not tumor derived and probably results from CH. There is of course the possibility that there is an abnormally high CTC fraction in WBC harboring this mutation but this is not likely. We would expect the probability of the mutation being tumor derived to be low. As expected, this probability is estimated to be $\frac{exp(-1.1)}{exp(-1.1) + 1}$ or 0.25. 
 
 # Session information
 
 ```{r session}
 sessionInfo()
 ```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
