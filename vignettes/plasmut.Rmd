@@ -11,14 +11,15 @@ vignette: >
   %\VignetteEncoding{UTF-8}
 ---
 
-# Introduction
+# Motivating example
 
-Suppose we identified 4 fragments with a variant out of 1000 cell-free DNA (cfDNA) fragments in plasma, and 1 fragment with the same mutation in sequenced white blood cells.
+Suppose our plasma-based cfDNA analysis identified four fragments with a *TP53* variant out of 1000 fragments overlapping that position.  
+In matched WBC sequencing, we observed no fragments with this mutation with only 600 fragments spanning this position.
+How strong is the evidence that the *TP53* mutation is tumor-derived?
 The possible scenarios that explain the observed data are:
-(1) the variant is tumor-derived and some CTCs are mixed in with the WBCs,
-(2) the variant is derived from clonal hematopoeisis of indeterminant potential (CHIP).
-A third explanation is sequencing error, but after removing PCR duplicates the probability of observing the same event in plasma and WBCs should be negligible relative to the scenarios listed above.
-In the absence of additional information, our prior for the prevalence of CTCs inter-mixed with WBCs will be influential on how we interpret this data.
+(1) the variant is tumor-derived,
+(2) the variant is derived from CH but we were unlucky and did not observe the mutation in the buffy coat.
+A third explanation is sequencing error, but after removing PCR duplicates we assume the probability of observing the same mutation in four independent molecules is negligible.
 
 # Data organization
 
@@ -29,30 +30,22 @@ library(ggrepel)
 library(plasmut)
 library(qpdf)
 knitr::opts_chunk$set(cache=TRUE)
-
 lo <- function(p) log(p/(1-p))
 ```
 
 We assume the following minimal representation for the mutation data such that each row uniquely identifies a mutation within a sample.
-As inference for a mutation is independent of other mutations in the same sample, the Bayesian model is implemented independently for each row in the table.
 
 ```{r data_wrangling}
 ## sample data
-datA <- tibble(y=c(4, 1),
-              n=c(1000, 1000),
+p53 <- tibble(y=c(4, 0),
+              n=c(1000, 600),
               analyte=c("plasma", "buffy coat"),
-              mutation="mutA",
+              mutation="TP53",
               sample_id="id1")
-datB <- tibble(y=c(4, 0),
-              n=c(1000, 1000),
-              analyte=c("plasma", "buffy coat"),
-              mutation="mutB",
-              sample_id="id1")
-dat <- bind_rows(datA, datB) %>%
+dat <- p53 %>%
     unite("uid", c(sample_id, mutation), remove=FALSE) %>%
     group_by(uid) %>%
     nest()
-
 ## required format for plasmut
 dat
 ```
@@ -62,14 +55,24 @@ dat
 
 ## Bayesian model
 
-From matched sequencing, for a given mutation, we are given the number of mutant reads and distinct reads in plasma ($y_p$, $n_p$); the number of mutant reads and distinct reads in the buffy coat layer ($y_w$, $n_w$). Using this data, we want to estimate the posterior odds that the cell-free DNA mutation is tumor-derived. If this probability is low, the mutation may be a product of clonal hematopoiesis (CH). The posterior odds is equal to the Bayes factor times the prior odds of the mutation being tumor-derived: $\frac{p(S | y_p, y_w, n_p, n_w)}{p(H | y_p, y_w, n_p, n_w)} = \frac{p(y_w, y_p | n_p, n_w, S)}{p(y_w, y_p | n_p, n_w, H)} \cdot \frac{p(S)}{p(H)}$. 
+Let ($y_p$, $n_p$) denote the number of mutant reads and total number of distinct reads plasma and ($y_w$, $n_w$) the corresponding frequencies from the buffy coat. 
+Assuming that the mutation is either tumor- or CH-derived, we can estimate the posterior odds:
+$$\frac{p(S | y_p, y_w, n_p, n_w)}{p(H | y_p, y_w, n_p, n_w)} = \frac{p(y_w, y_p | n_p, n_w, S)}{p(y_w, y_p | n_p, n_w, H)} \cdot \frac{p(S)}{p(H)}, $$
+where *S* is the somatic (tumor-derived) model and H is hematopietic (CH-derived).
+The term $\frac{p(y_w, y_p | n_p, n_w, S)}{p(y_w, y_p | n_p, n_w, H)}$ is the Bayes factor and is a ratio of the marginal likelihoods.
+For the denominator, we assume that the unobserved true mutant allele frequency ($\theta$) in plasma is the same as the mutant allele frequency in buffy coat and rewrite the marginal likelihood as $\int_{\theta} p(y_p | \theta, n_p) p(y_w | \theta,  n_w)d\theta p(\theta | H)$.
+We suggest a diffuse prior for $\theta$ to provide support both rare and common CH mutations. 
 
-To compute the Bayes factor we must estimate the marginal likelihood when we assume the mutation is tumor-derived and CH. There exists a true but unobserved mutant allele fraction (MAF) in plasma and white blood cells, $\theta_p$ and $\theta_w$ respectively, and to estimate the marginal likelihoods, we integrate out these parameters.  When we assume the mutation is a product of CH (model H), we estimate $p(y_p, y_w | n_p, n_w, H) = \int_{\theta} p(y_p | n_p, \theta)$. This single integral is possible becuase given that the mutation is a result of CH, it is reasonable to assume that $\theta_p = \theta_w$. The prior for $\theta$ is a diffuse Beta distribution to support the possibility of both rare and common CH mutations. When we assume the mutation is tumor-derived or somatic (model S), we estimate $p(y_p, y_w | n_p, n_w, S) = \int_{\theta_p} p(y_p | n_p, \theta_p, S) d\theta_w\int_{\theta_w} p(y_w | n_w, \theta_w, S) d\theta_p$ since the double integral can be factored into two single integrals since $\theta_p$ is independent of $\theta_w$. A diffuse prior for $\theta_p$ is chosen to allow for many different somatic mutation possibilities. There are two possibilities for a prior on $\theta_w$. If we believe that there are no circulating tumor cells (CTCs) within the buffy coat layer, then $\theta_w = 0$. However, if we believe that CTCs exist within the buffy coat layer, a prior distribution near zero would be appropriate (i.e., Beta(1, $10^3$)).      
+For model *S*, the marginal likelihood is factored as $p(y_p, y_w | n_p, n_w, S) = \int_{\theta_p} p(y_p | n_p, \theta_p, S) d\theta_w\int_{\theta_w} p(y_w | n_w, \theta_w, S) d\theta_p$.
+A diffuse prior for $\theta_p$ allows support for both rare and common somatic mutations. 
+$\theta_W$ can be $> 0$ under model $S$ if circulating tumor cells (CTCs) are inter-mixed with white blood cells in the buffy coat.
+As CTCs tend to be uncommon even in patients with late-stage disease, we use a prior distribution that concentrates most of the mass near zero (i.e., Beta(1, $10^3$)).
 
-We can compute marginal likelihoods for model S and H by simply drawing Monte Carlo samples from the $\theta$ priors we defined. But, when the likelihood is more concentrated than the prior, this sampling approach can be inefficient and numerically unstable. To solve these issues, we implement an importance sampling approach. 
+## Implementation
 
-## Importance sampling
-
+We can compute marginal likelihoods for model S and H by simply drawing Monte Carlo samples from the $\theta$ priors we defined. 
+But, when the likelihood is more concentrated than the prior, this sampling approach can be inefficient and numerically unstable. 
+To solve these issues, we implement an importance sampling approach. 
 The general idea for importance sampling is that we want to sample $\theta$'s from a density that has a similar shape as the posterior but fatter tails so that we avoid spending time on simulations that have very low likelihood. Importance sampling should make estimation of the marginal likelihood more efficient, and the resulting Bayes factor estimates more stable with fewer Monte Carlo samples.
 
 ## Model assumptions and priors
