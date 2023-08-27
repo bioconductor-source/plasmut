@@ -4,7 +4,7 @@ author: "Adith S. Arun and Robert B. Scharpf"
 date: "`r format(Sys.Date())`"
 output: BiocStyle::html_document
 abstract: >
-  Mutation-based approaches for detection of cancer from cell-free DNA (cfDNA) using liquid biopsies have the potential to track a patient's response to treatment, enabling effective and timely decisions on therapy.  However, mutations arising from clonal hematopoeisis (CH) are common and tumor biopsies for definitive identification of the origin of these mutations is not always available. Sequencing of matched cells from buffy coat and the presence of mutations in these cells has been used as a test to rule-in CH, but uneven sequencing depths between matched cell-free DNA and buffy coat samples and the potential for contamination of buffy coat with circulating tumor cells (CTCs) are not captured by rule-based analyses.  This package provides estimates of the marginal likelihood for CH- and tumor-origin models of cfDNA mutations in plasma, requiring sequencing of cfDNA and matched buffy coat and the allele frequencies of high quality alignments available from standard mutation callers.
+  Mutation-based approaches for detection of cancer from cell-free DNA (cfDNA) using liquid biopsies have the potential to track a patient's response to treatment, enabling effective and timely decisions on therapy.  However, mutations arising from clonal hematopoeisis (CH) are common and tumor biopsies for definitive identification of the origin of these mutations is not always available. Sequencing of matched cells from buffy coat and the absence of mutations in these cells has been used as a test to rule-out CH, but uneven sequencing depths between matched cell-free DNA and buffy coat samples and the potential for contamination of buffy coat with circulating tumor cells (CTCs) are not captured by rule-based analyses.  This package estimates Bayes factors that weigh the evidence of competing CH- and tumor-origin models of cfDNA mutations detected in cfDNA, requiring only the allele frequencies of high quality alignments available from standard mutation callers.
 vignette: >
   %\VignetteIndexEntry{Modeling the origin of mutations in a liquid biopsy: cancer or clonal hematopoiesis?}
   %\VignetteEngine{knitr::rmarkdown}
@@ -14,22 +14,17 @@ bibliography:  arun2023.bib
 
 # Motivating example
 
-Suppose our plasma-based cfDNA analysis identified four fragments with a *TP53* variant out of 1000 fragments overlapping that position.
-In matched WBC sequencing, we observed no fragments with this mutation with only 600 fragments spanning this position.
-How strong is the evidence that the *TP53* mutation is tumor-derived?
-The possible scenarios that explain the observed data are:
-(1) the variant is tumor-derived,
-(2) the variant is derived from CH but we were unlucky and did not observe the mutation in the buffy coat.
-A third explanation is sequencing error, but after removing PCR duplicates we assume the probability of observing the same mutation in four independent molecules is negligible.
+Assume mutation analyses identify four fragments with a *TP53* variant out of 1000 fragments overlapping that position.
+In matched WBC sequencing, we observed no fragments with this mutation out of 600 distinct fragments spanning this position.
+While *TP53* is a well-known tumor suppressor, mutations in *TP53* are also common in CH.
+Given the mutant allele frequencies in cfDNA and matched buffy coat sequencing and prior studies, how strong is the evidence that the *TP53* mutation is tumor-derived?
 
 # Data organization
 
 ```{r setup, message=FALSE}
 library(magrittr)
 library(tidyverse)
-library(ggrepel)
 library(plasmut)
-library(qpdf)
 knitr::opts_chunk$set(cache=TRUE)
 lo <- function(p) log(p/(1-p))
 ```
@@ -56,18 +51,18 @@ dat
 
 ## Bayesian model
 
-Let ($y_p$, $n_p$) denote the number of mutant reads and total number of distinct reads plasma and ($y_w$, $n_w$) the corresponding frequencies from the buffy coat. 
-Assuming that the mutation is either tumor- or CH-derived, we can estimate the posterior odds:
+Let ($y_p$, $n_p$) denote the number of mutant reads and total number of distinct reads in plasma and ($y_w$, $n_w$) the corresponding frequencies from the buffy coat.
+Assuming that the mutation is either tumor- or CH-derived, the posterior odds is given by
 $$\frac{p(S | y_p, y_w, n_p, n_w)}{p(H | y_p, y_w, n_p, n_w)} = \frac{p(y_w, y_p | n_p, n_w, S)}{p(y_w, y_p | n_p, n_w, H)} \cdot \frac{p(S)}{p(H)}, $$
-where *S* is the somatic (tumor-derived) model and H is hematopietic (CH-derived).
+where *S* indicates the somatic (tumor-derived) model and H denotes the hematopietic (CH-derived) model.
 The term $\frac{p(y_w, y_p | n_p, n_w, S)}{p(y_w, y_p | n_p, n_w, H)}$ is the Bayes factor and is a ratio of the marginal likelihoods.
 For the denominator, we assume that the unobserved true mutant allele frequency ($\theta$) in plasma is the same as the mutant allele frequency in buffy coat and rewrite the marginal likelihood as $\int_{\theta} p(y_p | \theta, n_p) p(y_w | \theta,  n_w) p(\theta | H)d\theta$.
-We suggest a diffuse prior for $\theta$ to provide support both rare and common CH mutations. 
+We suggest a diffuse prior for $\theta$ to provide support for both rare and common CH mutations. 
 
 For model *S*, the marginal likelihood is factored as $\int_{\theta_p} p(y_p | n_p, \theta_p) p(\theta_p | S)d\theta_p\int_{\theta_w} p(y_w | n_w, \theta_w) p(\theta_w | S) d\theta_w$.
-A diffuse prior for $\theta_p$ allows support for both rare and common somatic mutations. 
+A diffuse prior for $\theta_p$ allows support for both rare and common somatic mutations.
 Under model $S$, $\theta_W$ is $> 0$ if circulating tumor cells (CTCs) are inter-mixed with white blood cells in the buffy coat.
-As CTCs tend to be uncommon even in patients with late-stage disease, we use a prior distribution that concentrates most of the mass near zero (i.e., Beta(1, $10^3$)).
+As CTCs tend to be uncommon even in patients with late-stage disease, we suggest a prior distribution that concentrates most of the mass near zero (i.e., Beta(1, $10^3$)).
 
 ## Implementation
 
@@ -75,7 +70,7 @@ We can compute marginal likelihoods for model $S$ and $H$ by simply drawing Mont
 However, when the likelihood is much more concentrated than the prior, this sampling approach can be inefficient and numerically unstable. 
 To mitigate these issues, we implemented an importance sampling approach where the target distribution for the importance sampler is a weighted average of the prior and posterior. 
 The resulting mixture distribution has a shape similar to the posterior but with fatter tails.
-As the target distribution ensures that we sample values of $\theta$ where the posterior has a positive likelihood, approximation of the marginal likelihoods will be more stable and efficient.
+As the target distribution ensures that we sample values of $\theta$ where the posterior has a positive likelihood, approximation of the marginal likelihoods is more accurate with fewer Monte Carlo simulations.
 
 In the following code block, we assume that
 (1) the probability that CTCs are mixed in with the WBCs is small (e.g., 1 CTC per 1,000 cells) using a Beta(1, 10^3) prior,
@@ -91,17 +86,17 @@ param.list <- list(ctc=list(a=1, b=10e3),
                    prior.weight=0.1)
 ```
 
-Next, we estimate the marginal likelihood for the mutation frequencies under the $S$ and $H$ models and return all Monte Carlo samples in a list.  
+Next, we estimate the marginal likelihood for the mutation frequencies under the $S$ and $H$ models and return all Monte Carlo samples in a list.
 For running this model on datasets with a large number of candidate tumor-derived mutations, we recommend saving only the marginal likelihoods and Bayes factors by setting  `save_montecarlo=FALSE`.
 
 ```{r montecarlo}
 stats <- importance_sampler(dat$data[[1]], param.list)
-stats  ## with all the monte carlo samples
 ## Just the mutation-level summary statistics (marginal likelihoods and bayes factors)
 importance_sampler(dat$data[[1]], param.list, save_montecarlo=FALSE)
 ```
 
 We view the plasma MAF of 4/1000 and buffy coat MAF of 0/600 as weak evidence that the mutation is tumor derived (Bayes factor  = `r round(exp(stats$bayesfactor$bayesfactor), 2)`).
+As previous studies have demonstrated that *TP53* mutations are common in CH, our prior odds is 1 and so the posterior odds for the tumor-origin model is the same as the Bayes factor, `r round(exp(stats$bayesfactor$bayesfactor), 2)`.
 
 ## Efficiency of importance sampler
 
@@ -171,11 +166,11 @@ combined %>%
 
 # Application to van't Erve et al.
 
-We apply our methods to the dataset introduced @vanterve2023 where cfDNA and buffy coat were sequenced for patients with metastatic colorectal cancer.
-Below, we select four mutations and run the importance sampler for these candidate mutations independently. 
+We illustrate this approach on a dataset of cfDNA and matched buffy coat sequencing for patients with metastatic colorectal cancer [@vanterve2023].
+Below, we select four mutations and run the importance sampler for these candidate mutations independently.
 
 ```{r vanterve}
-data(crcseq)
+data(crcseq, package="plasmut")
 crcseq %>% select(-position)
 ```
 
@@ -185,24 +180,32 @@ params <- list(ctdna = list(a = 1, b = 9),
                chip = list(a= 1, b = 9), 
                montecarlo.samples = 50e3, 
                prior.weight = 0.1)
-
 muts <- unite(crcseq, "uid", c(patient, gene), remove = FALSE) %>% 
         group_by(uid) %>% nest()
-
 #Each element of the data column contains a table with the variant and total allele counts in plasma and buffy coat. 
-
 #Run the importance sampler
 muts$IS <- muts$data %>% map(importance_sampler, params)
-
-bf <- apply(muts, 1, function(x) x$data %>% select(-position) %>% mutate(bayes_factor = x$IS$bayesfactor$bayesfactor)) 
-
-bf %>% do.call(rbind, .) %>% as_tibble() %>% select(patient, gene, aa, bayes_factor) %>% distinct()
+fun <- function(x){
+    result <- x$data %>%
+        select(-position) %>%
+        mutate(bayes_factor = x$IS$bayesfactor$bayesfactor)
+    return(result)
+}
+bf <- apply(muts, 1, fun) 
+bf %>% do.call(rbind, .) %>%
+    as_tibble() %>%
+    select(patient, gene, aa, bayes_factor) %>%
+    rename(log_bf=bayes_factor) %>%
+    distinct()
 ```
 
-We report the log Bayes factor for the four mutations.
-The Bayes factor informs us of the likelihood that a mutation is tumor-derived. The log Bayes factor is equal to the log posterior odds when the prior odds of a mutation being tumor-derived are 1, which is a good uninformative assumption in the majority of cases. Let us examine the E1306* APC mutation for patient 12. When sequencing the buffy coat, we observe 0 variant reads across 963 total reads. But, when sequencing the cell-free DNA, we observed 395 variant reads across 1750 total reads. Intuitively, this means that the mutation is not found in white blood cells but is present in cell-free DNA fragments meaning that the source of the mutation must be from a non-WBC source. We expect the mutation to be a product of the tumor whose cellular turnover shed mutant DNA fragments into the bloodstream. Concordantly, the log Bayes factor is 190 which translates to a probability of being tumor derived of $\frac{exp(190)}{exp(190) + 1}$ or 1. 
-
-On the other hand, we observe 5 mutant reads across 1495 total WBC reads for the M237K TP53 mutation; 15 mutant reads across 2969 total cfDNA reads. The observed mutant read rate is roughly equal in WBC and cfDNA, and we just happen to observe more cfDNA reads in general. This suggests that the variant is likely not tumor derived and probably results from CH. There is of course the possibility that there is an abnormally high CTC fraction in WBC harboring this mutation but this is not likely. We would expect the probability of the mutation being tumor derived to be low. As expected, this probability is estimated to be $\frac{exp(-1.1)}{exp(-1.1) + 1}$ or 0.25. 
+For the E1306\* *APC* mutation,  395 of 1750 fragments in cfDNA contain the mutation while zero of 963 fragments from buffy coat contain this mutation.
+The evidence that E1306\* is tumor-derived is definitive (log Bayes factor = 190).
+For the M237K *TP53* mutation, we observe 5 mutations out of 1495 fragments in buffy coat and 15 mutations out of 2969 fragments in cfDNA.
+The observed mutant read rate is roughly equal in WBC and cfDNA, providing further evidence that the variant likely originates from CH.
+As indicated by our prior, we feel that a high CTC fraction in buffy coat is very unlikely given the rarity of CTCs relative to white blood cells in buffy coat.
+The log Bayes factor (equivalent to the posterior log odds assuming a prior odds of 1) is -1.14.
+The probability that the mutation is tumor-derived is only 0.25 ($\frac{exp(-1.14)}{exp(-1.14) + 1}$ or 0.24).
 
 # Session information
 
