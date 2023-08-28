@@ -201,7 +201,7 @@ model_w <- function(dat, params){
     g.density <- prior.weight * g.prob.prior +
         (1-prior.weight)*g.prob.posterior
     not.finite <- !is.finite(g.density)
-    if(any(not.finite)) print("Not finite")
+    if(any(not.finite)) warning("Not finite")
     loglik.p <- dbinom(y["plasma"], n["plasma"], g.samples, log=TRUE)
     loglik.w <- dbinom(y["buffy coat"], n["buffy coat"], g.samples, log=TRUE)
     lik <- exp(loglik.p + loglik.w)
