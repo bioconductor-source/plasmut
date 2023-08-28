@@ -1,8 +1,8 @@
 Package: plasmut
 Type: Package
 Title: Stratifying mutations observed in cell-free DNA and white blood cells as germline, hematopoietic, or somatic
-Version: 0.99.1
-Authors@R: 
+Version: 0.99.0
+Authors@R:
   c(person(given = "Adith",
            family = "Arun",
            role = c("aut", "cre"),
@@ -10,7 +10,7 @@ Authors@R:
     person(given = "Robert",
            family = "Scharpf",
            role = "aut"))
-Description: A Bayesian method for quantifying the liklihood that a given plasma mutation arises from clonal hematopoesis or the underlying tumor. It requires sequencing data of the mutation in plasma and white blood cells with the number of distinct and mutant reads in both tissues. We implement a Monte Carlo importance sampling method to assess the likelihood that a mutation arises from the tumor relative to non-tumor origin. 
+Description: A Bayesian method for quantifying the liklihood that a given plasma mutation arises from clonal hematopoesis or the underlying tumor. It requires sequencing data of the mutation in plasma and white blood cells with the number of distinct and mutant reads in both tissues. We implement a Monte Carlo importance sampling method to assess the likelihood that a mutation arises from the tumor relative to non-tumor origin.
 License: Artistic-2.0
 Encoding: UTF-8
 biocViews: Bayesian, SomaticMutation, GermlineMutation, Sequencing
@@ -19,7 +19,7 @@ Imports:
     tibble,
     stats,
     dplyr
-Depends: 
+Depends:
     R (>= 4.1.0)
 Suggests:
     knitr,
