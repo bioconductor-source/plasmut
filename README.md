@@ -19,7 +19,7 @@ This package is also available through Bioconductor.
 
 Please see the vignette in `doc/plasmut.html`. 
 
-We illustrate this approach on a dataset of cfDNA and matched buffy coat sequencing for patients with metastatic colorectal cancer [van ’t Erve et al. 2023)](https://pubmed.ncbi.nlm.nih.gov/36534496/). Below, we select four mutations and run the importance sampler for these candidate mutations independently.
+We illustrate this approach on a dataset of cfDNA and matched buffy coat sequencing for patients with metastatic colorectal cancer [(van ’t Erve et al. 2023)](https://pubmed.ncbi.nlm.nih.gov/36534496/). Below, we select four mutations and run the importance sampler for these candidate mutations independently.
 
 ``` r
 params <- list(ctdna = list(a = 1, b = 9), 
