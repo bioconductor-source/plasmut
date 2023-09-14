@@ -15,3 +15,9 @@ inst/doc
 /vignettes/plasmut_files/
 /vignettes/scratch.rmd
 /vignettes/auto/
+inst/.DS_Store
+inst/extdata/.DS_store
+man/.DS_Store
+plasmut.Rproj
+R/.DS_Store
+vignettes/.DS_Store
