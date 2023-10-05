@@ -19,6 +19,16 @@ In matched WBC sequencing, we observed no fragments with this mutation out of 60
 While *TP53* is a well-known tumor suppressor, mutations in *TP53* are also common in CH.
 Given the mutant allele frequencies in cfDNA and matched buffy coat sequencing and prior studies, how strong is the evidence that the *TP53* mutation is tumor-derived?
 
+# Installation
+
+Install the plasmut package from Bioconductor
+
+```{r installation, eval = FALSE}
+if (!require("BiocManager", quietly = TRUE))
+    install.packages("BiocManager")
+BiocManager::install("plasmut")
+```
+
 # Data organization
 
 ```{r setup, message=FALSE}

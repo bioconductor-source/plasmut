@@ -12,7 +12,13 @@ Mutation-based approaches for detection of cancer from cell-free DNA (cfDNA) usi
 ## install.packages("devtools")
 devtools::install_github("cancer-genomics/plasmut")
 ```
-This package is also available through Bioconductor. 
+This package is also available through Bioconductor and can be installed using the folllowing command: 
+
+```r
+if (!require("BiocManager", quietly = TRUE))
+    install.packages("BiocManager")
+BiocManager::install("plasmut")
+```
 
 
 ### Usage

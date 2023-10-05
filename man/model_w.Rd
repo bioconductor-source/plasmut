@@ -41,5 +41,5 @@ dat <- data.frame(y=c(4, 1),
               analyte=c("plasma", "buffy coat"),
               mutation="mutA",
               sample_id="id1")
-importance_sampler(dat, param.list)
+model_w(dat, param.list)
 }

@@ -1,4 +1,5 @@
-0.1.99: - initial plasmut package release - adds importance sampling method for bayesian inference - vignette walkthrough of package on sample data
+# 0.1.99 
 
-
-
+Initial plasmut package release. 
+Adds importance sampling method for bayesian inference. 
+Includes vignette walkthrough of package on sample data. 

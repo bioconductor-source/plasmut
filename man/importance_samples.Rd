@@ -6,26 +6,6 @@
 \usage{
 importance_samples(y, n, a, b, S, prior.weight, model, dna_source)
 }
-\arguments{
-\item{y}{number of samples}
-
-\item{n}{number of total samples to draw}
-
-\item{a}{importance sample beta parameter for shape}
-
-\item{b}{importance sample beta parameter for rate}
-
-\item{S}{number of binominal samples to draw of size 1}
-
-\item{prior.weight}{probability of success in binomial}
-
-\item{model}{the model (wbc, etc.) that is being studied}
-
-\item{dna_source}{source of the dna (e.g., CTC)}
-}
-\value{
-list with monte carlo samples, probability densities,and likelihoods
-}
 \description{
 Generate importance samples
 }

@@ -1,13 +1,4 @@
 #'Generate importance samples
-#' @param y number of samples
-#' @param n number of total samples to draw
-#' @param S number of binominal samples to draw of size 1
-#' @param a importance sample beta parameter for shape
-#' @param b importance sample beta parameter for rate
-#' @param prior.weight probability of success in binomial
-#' @param model the model (wbc, etc.) that is being studied
-#' @param dna_source source of the dna (e.g., CTC)
-#' @return list with monte carlo samples, probability densities,and likelihoods
 importance_samples <- function(y, n,
                                a, b,
                                S,
@@ -165,7 +156,7 @@ plasma_somatic <- function(dat, params){
 #'               analyte=c("plasma", "buffy coat"),
 #'               mutation="mutA",
 #'               sample_id="id1")
-#' importance_sampler(dat, param.list)
+#' model_w(dat, param.list)
 #' @return list of samples, probability densities, and likelihood for non-tumor
 #' assumption
 #' @export
