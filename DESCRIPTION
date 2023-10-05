@@ -20,7 +20,7 @@ Imports:
     stats,
     dplyr
 Depends:
-    R (>= 4.1.0)
+    R (>= 4.3.0)
 Suggests:
     knitr,
     rmarkdown,
