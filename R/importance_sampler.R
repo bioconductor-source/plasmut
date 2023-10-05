@@ -1,4 +1,3 @@
-#'Generate importance samples
 importance_samples <- function(y, n,
                                a, b,
                                S,
