@@ -1,7 +1,7 @@
 Package: plasmut
 Type: Package
 Title: Stratifying mutations observed in cell-free DNA and white blood cells as germline, hematopoietic, or somatic
-Version: 0.99.3
+Version: 0.99.5
 Authors@R:
   c(person(given = "Adith",
            family = "Arun",

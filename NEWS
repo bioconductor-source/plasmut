@@ -1,0 +1,9 @@
+CHANGES IN VERSION 0.99.5
+-------------------------
+
+
+SIGNIFICANT USER-VISIBLE CHANGES
+
+    o Initial plasmut package release:
+  
+    o Adds importance sampling method for Bayesian inference through importance_sampler()
