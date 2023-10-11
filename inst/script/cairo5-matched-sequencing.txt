@@ -1,0 +1,3 @@
+The data in the csv file `inst/extdata/cairo5-matched-sequencing.csv` contains processed matched sequencing output from the CAIRO5 clinical trial. This data is presented in the following paper: https://pubmed.ncbi.nlm.nih.gov/36534496/. Each row in this csv file corresponds to a patient's sequenced mutation and the respective number of distinct and mutant reads in white blood cells and cell-free DNA tissues for that mutation. 
+
+The data in this csv file is processed according to inst/script/crcseq.R to create crcseq.rda that is fed through plasmut to estimate the probability of tumor specific alterations. 

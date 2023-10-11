@@ -17,29 +17,6 @@ NULL
 
 
 
-#' This 
-#'
-#'
-#' Processed matched sequencing output from the CAIRO5 clinical trial.
-#' The data in this sheet is presented in this paper: 
-#' The cohort and analyses are described here: 
-#' \url{https://pubmed.ncbi.nlm.nih.gov/36534496/}
-#' 
-#' The data in this csv file (inst/extdata/cairo5-matched-sequencing.csv)
-#' is processed according to inst/script/crcseq/R to create crcseq.rda 
-#' that is fed through plasmut to estimate the probability
-#' of tumor specific alterations
-#'
-#' @docType data
-#' @name cairo5-matched-sequencing
-#' @return Number of distinct and mutant reads in white blood cells
-#' and cell-free DNA tissues for each patient's mutations (each row)
-#' cairo5-matched-sequencing
-NULL
-
-
-
-
 
 
 
